@@ -19,7 +19,7 @@ client = OpenAI(api_key=api_key)
 
 # 경로 설정
 DB_BASE_PATH = "./data/dev_databases"
-INPUT_PATH = "./results/failure_corpus.json"
+INPUT_PATH = "./results/failure_corpus_official.json"
 OUTPUT_PATH = "./results/multi_turn_healing.json"
 
 def extract_tables_from_sql(pred_sql):

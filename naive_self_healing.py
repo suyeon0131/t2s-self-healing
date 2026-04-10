@@ -15,7 +15,7 @@ if not api_key:
 client = OpenAI(api_key=api_key)
 
 # 경로 설정
-INPUT_PATH = "./results/failure_corpus.json"
+INPUT_PATH = "./results/failure_corpus_official.json"
 OUTPUT_PATH = "./results/naive_fixed_corpus.json"
 
 def call_llm_to_fix_query_naive(question, pred_sql, feedback_prompt):
