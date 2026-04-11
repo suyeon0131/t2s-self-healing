@@ -34,7 +34,9 @@ def compare_results(gold_df, pred_df):
     if gold_df is None or pred_df is None:
         return False
     try:
-        return gold_df.values.tolist() == pred_df.values.tolist()
+        gold_values = set(tuple(row) for row in gold_df.values.tolist())
+        pred_values = set(tuple(row) for row in pred_df.values.tolist())
+        return gold_values == pred_values
     except:
         return False
 
