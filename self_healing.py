@@ -131,6 +131,7 @@ def execute_sql(db_id, sql_query):
         return False, str(e), None
     
 def compare_results(gold_df, pred_df):
+    """에이전트의 결과가 정답과 일치하는지 확인합니다."""
     if gold_df is None or pred_df is None:
         return False
     try:
