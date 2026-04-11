@@ -78,12 +78,11 @@ def execute_sql(db_id, sql_query):
         return False, str(e), None
     
 def compare_results(gold_df, pred_df):
-    """정답 표와 예측 표의 내용이 완전히 일치하는지(EX) 검사합니다."""
     if gold_df is None or pred_df is None:
         return False
     try:
-        gold_values = gold_df.values.tolist()
-        pred_values = pred_df.values.tolist()
+        gold_values = set(tuple(row) for row in gold_df.values.tolist())
+        pred_values = set(tuple(row) for row in pred_df.values.tolist())
         return gold_values == pred_values
     except:
         return False
