@@ -435,11 +435,38 @@ def build_join_path_feedback(db_id, join_info):
     return feedback
 
 
-def build_general_feedback(db_id, pred_sql):
-    """GENERAL: 기존 방식 — 데이터 샘플 + 스키마 (폴백)"""
+def build_general_feedback(db_id, question, pred_sql):
+    """GENERAL: 절차적 분해(Intermediate Representation) 유도 + 데이터 샘플
+    
+    기존 방식(단순 데이터 샘플 주입)에서 개선:
+    - 질문을 단계별 절차로 먼저 분해하도록 강제
+    - 각 단계에서 필요한 테이블, 컬럼, 연산을 명시하게 유도
+    - 분해 결과를 바탕으로 SQL을 재작성하게 함
+    """
     used_tables = extract_tables_from_sql(pred_sql)
     sample_data_text = get_sample_rows(db_id, used_tables)
-    return f"The query executed without errors but returned incorrect data. Please check the actual database sample rows below and rewrite the query:\n{sample_data_text}"
+    
+    feedback = """ERROR TYPE: Semantic Error (Result Mismatch)
+The query executed without errors but returned WRONG results. Your SQL logic needs to be restructured.
+
+REPAIR STRATEGY — Procedural Decomposition:
+Before writing SQL, you MUST decompose the question into a step-by-step execution plan using the format below. Do NOT skip this step.
+
+[Execution Plan]
+Step 1 — IDENTIFY TARGET: What exactly does the question ask to return? (specific column names, count, ratio, etc.)
+Step 2 — FIND SOURCE TABLES: Which tables contain the data needed? List each table and the relevant columns.
+Step 3 — DETERMINE JOIN PATH: How should these tables be connected? Specify the exact join conditions (e.g., T1.id = T2.foreign_id).
+Step 4 — APPLY FILTERS: What WHERE conditions are needed? Use exact values from the database (check sample data below).
+Step 5 — APPLY AGGREGATION: Is GROUP BY, ORDER BY, HAVING, DISTINCT, or any aggregation (COUNT, SUM, AVG) needed?
+Step 6 — FORMAT OUTPUT: Does the question ask for a specific output format? (e.g., top N, yes/no, percentage, specific column order)
+
+Write the execution plan FIRST, then convert it to SQL.
+
+[Sample Data for Reference]
+"""
+    feedback += sample_data_text
+    
+    return feedback
 
 
 def build_agg_logic_feedback(db_id, question, pred_sql, agg_info):
@@ -489,7 +516,7 @@ def build_feedback(detected_type, detection_info, db_id, question, pred_sql, exe
     elif detected_type == "AGG_LOGIC":
         return build_agg_logic_feedback(db_id, question, pred_sql, detection_info)
     else:  # GENERAL
-        return build_general_feedback(db_id, pred_sql)
+        return build_general_feedback(db_id, question, pred_sql)
 
 
 # ============================================================
