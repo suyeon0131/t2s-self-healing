@@ -176,8 +176,14 @@ def detect_value_format(db_id, pred_sql):
     return len(mismatches) > 0, mismatches
 
 
-def detect_join_path(db_id, pred_sql, schema_text):
-    """JOIN_PATH 감지: FK 그래프 기반으로 테이블 연결 누락 확인"""
+def detect_join_path(db_id, question, pred_sql, schema_text):
+    """JOIN_PATH 감지: FK 그래프 연결성 + 질문 엔티티-테이블 매핑 기반 누락 확인
+    
+    개선점 (v2 → v3):
+    - 기존: FK 그래프에서 사용된 테이블 간 연결이 끊어진 경우만 감지
+    - 추가: 질문에서 언급된 엔티티에 필요한 테이블이 SQL에 없는 경우도 감지
+    - 추가: pred SQL이 참조하는 컬럼이 사용 중인 테이블에 없는 경우도 감지
+    """
     db_path = os.path.join(DB_BASE_PATH, db_id, f"{db_id}.sqlite")
     if not os.path.exists(db_path):
         return False, {}
@@ -207,11 +213,15 @@ def detect_join_path(db_id, pred_sql, schema_text):
                     "to_table": row[2].lower(),
                     "to_column": row[4]
                 })
+        
+        # 각 테이블의 컬럼 목록 수집
+        table_columns = {}
+        for table in all_tables:
+            cursor.execute(f"PRAGMA table_info([{table}])")
+            table_columns[table.lower()] = [row[1].lower() for row in cursor.fetchall()]
+        
         conn.close()
     except Exception:
-        return False, {}
-    
-    if not fk_list:
         return False, {}
     
     # 인접 리스트 구축
@@ -221,37 +231,111 @@ def detect_join_path(db_id, pred_sql, schema_text):
         adj.setdefault(ft, set()).add(tt)
         adj.setdefault(tt, set()).add(ft)
     
-    # 사용된 테이블 중 FK 그래프에 있는 것만 필터
+    signals = []
+    
+    # 감지 1: 기존 BFS 연결성 검사
     used_in_graph = [t for t in used_tables if t in adj]
+    if len(used_in_graph) >= 2:
+        visited = set()
+        queue = [used_in_graph[0]]
+        while queue:
+            node = queue.pop(0)
+            if node in visited:
+                continue
+            visited.add(node)
+            for neighbor in adj.get(node, []):
+                if neighbor in used_in_graph and neighbor not in visited:
+                    queue.append(neighbor)
+        
+        unreachable = [t for t in used_in_graph if t not in visited]
+        if unreachable:
+            signals.append(f"unreachable_tables: {unreachable}")
     
-    if len(used_in_graph) < 2:
-        return False, {}
+    # 감지 2: 질문 엔티티 → 테이블 매핑 누락
+    q_lower = question.lower()
+    mentioned_tables = []
+    for table in all_tables:
+        t_lower = table.lower()
+        variants = [
+            t_lower,
+            t_lower.rstrip('s'),
+            t_lower + 's',
+            t_lower.replace('_', ' '),
+            t_lower.replace('_', ''),
+        ]
+        if any(v in q_lower for v in variants):
+            mentioned_tables.append(t_lower)
     
-    # BFS로 연결성 확인
-    visited = set()
-    queue = [used_in_graph[0]]
-    while queue:
-        node = queue.pop(0)
-        if node in visited:
-            continue
-        visited.add(node)
-        for neighbor in adj.get(node, []):
-            if neighbor in used_in_graph and neighbor not in visited:
-                queue.append(neighbor)
+    if len(mentioned_tables) >= 2:
+        missing_mentioned = [t for t in mentioned_tables if t not in used_tables]
+        if missing_mentioned:
+            signals.append(f"question_mentions_missing_tables: {missing_mentioned}")
     
-    unreachable = [t for t in used_in_graph if t not in visited]
+    # 감지 3: pred SQL이 참조하는 컬럼이 사용 중인 테이블에 없는 경우
+    # WHERE, SELECT, ON 절에서 테이블.컬럼 또는 별칭.컬럼 패턴 추출
+    # 단순하게: pred에서 사용된 모든 컬럼이 사용된 테이블들 중 하나에라도 있는지
+    pred_columns = re.findall(r'(?:SELECT|WHERE|ON|AND|OR|BY)\s+.*?(\w+)\.(\w+)', 
+                               pred_sql, re.IGNORECASE)
+    for alias, col in pred_columns:
+        col_lower = col.lower()
+        # 사용된 테이블 중 이 컬럼이 있는지 확인
+        found = False
+        for t in used_tables:
+            if t in table_columns and col_lower in table_columns[t]:
+                found = True
+                break
+        if not found:
+            # 이 컬럼이 다른 테이블에는 있는지 확인
+            for t, cols in table_columns.items():
+                if col_lower in cols and t not in used_tables:
+                    signals.append(f"column_{col}_needs_table_{t}")
+                    break
     
     info = {
         "fk_relations": fk_list,
         "used_tables": used_tables,
-        "unreachable": unreachable
+        "signals": signals
     }
     
-    return len(unreachable) > 0, info
+    return len(signals) > 0, info
 
 
-def detect_error_type(db_id, pred_sql, exec_success, exec_message, schema_text):
-    """3-type 오류 감지. 우선순위: SYNTAX → VALUE_FORMAT → JOIN_PATH → GENERAL
+def detect_agg_logic(question, pred_sql):
+    """AGG_LOGIC 감지: 질문에 수리 키워드가 있는데 SQL에 필요한 집계 패턴이 누락된 경우"""
+    q_lower = question.lower()
+    sql_upper = pred_sql.upper()
+    
+    signals = []
+    
+    # 비율/퍼센트 키워드 → CAST + 나눗셈 필요
+    ratio_keywords = ['ratio', 'percentage', 'percent', 'proportion']
+    if any(kw in q_lower for kw in ratio_keywords):
+        if 'CAST' not in sql_upper:
+            signals.append("ratio_keyword_without_CAST")
+        if '/' not in pred_sql:
+            signals.append("ratio_keyword_without_division")
+    
+    # 평균 키워드 → AVG 또는 SUM/COUNT 필요
+    avg_keywords = ['average', 'avg', 'mean']
+    if any(kw in q_lower for kw in avg_keywords):
+        if 'AVG' not in sql_upper and ('SUM' not in sql_upper or 'COUNT' not in sql_upper):
+            signals.append("average_keyword_without_AVG_or_SUM_COUNT")
+    
+    # "how many times" → 나눗셈 필요
+    if 'how many times' in q_lower or 'times more' in q_lower or 'times less' in q_lower:
+        if '/' not in pred_sql:
+            signals.append("times_keyword_without_division")
+    
+    # "difference" → 뺄셈 필요
+    if 'difference' in q_lower:
+        if '-' not in pred_sql and 'MINUS' not in sql_upper:
+            signals.append("difference_keyword_without_subtraction")
+    
+    return len(signals) > 0, {"signals": signals}
+
+
+def detect_error_type(db_id, question, pred_sql, exec_success, exec_message, schema_text):
+    """4-type 오류 감지. 우선순위: SYNTAX → VALUE_FORMAT → JOIN_PATH → AGG_LOGIC → GENERAL
     
     Returns:
         (error_type: str, detection_info: dict)
@@ -266,9 +350,14 @@ def detect_error_type(db_id, pred_sql, exec_success, exec_message, schema_text):
         return "VALUE_FORMAT", {"mismatches": mismatches}
     
     # Type 3: JOIN_PATH — 테이블 연결 누락
-    is_join_error, join_info = detect_join_path(db_id, pred_sql, schema_text)
+    is_join_error, join_info = detect_join_path(db_id, question, pred_sql, schema_text)
     if is_join_error:
         return "JOIN_PATH", join_info
+    
+    # Type 4: AGG_LOGIC — 집계/수리 연산 누락
+    is_agg_error, agg_info = detect_agg_logic(question, pred_sql)
+    if is_agg_error:
+        return "AGG_LOGIC", agg_info
     
     # 폴백: 일반 Semantic Error (기존 방식)
     return "GENERAL", {}
@@ -353,7 +442,43 @@ def build_general_feedback(db_id, pred_sql):
     return f"The query executed without errors but returned incorrect data. Please check the actual database sample rows below and rewrite the query:\n{sample_data_text}"
 
 
-def build_feedback(detected_type, detection_info, db_id, pred_sql, exec_message):
+def build_agg_logic_feedback(db_id, question, pred_sql, agg_info):
+    """AGG_LOGIC: 수학적 분해 유도 — 질문을 수식으로 먼저 분해한 뒤 SQL로 변환"""
+    signals = agg_info.get("signals", [])
+    
+    feedback = "ERROR TYPE: Aggregation / Logic Error\n"
+    feedback += "The query executed but returned WRONG results. "
+    feedback += "The question requires mathematical or aggregation operations that your SQL does not correctly implement.\n\n"
+    
+    feedback += "Detected issues:\n"
+    for s in signals:
+        if "ratio" in s or "division" in s:
+            feedback += "  - The question asks for a ratio/percentage, but your SQL is missing CAST(... AS REAL) or division (/).\n"
+        elif "average" in s:
+            feedback += "  - The question asks for an average, but your SQL is missing AVG() or SUM()/COUNT().\n"
+        elif "times" in s:
+            feedback += "  - The question asks 'how many times', which requires division, but your SQL has no division.\n"
+        elif "difference" in s or "subtraction" in s:
+            feedback += "  - The question asks for a difference, but your SQL is missing subtraction (-).\n"
+    
+    feedback += "\nREPAIR STRATEGY — Mathematical Decomposition:\n"
+    feedback += "1. TRANSLATE the question into a step-by-step math formula FIRST:\n"
+    feedback += "   - 'ratio of A to B' → CAST(COUNT(A) AS REAL) / COUNT(B)\n"
+    feedback += "   - 'percentage' → (part / whole) * 100.0, with CAST(... AS REAL) to avoid integer division\n"
+    feedback += "   - 'average X per Y' → SUM(X) / COUNT(DISTINCT Y) or AVG(X)\n"
+    feedback += "   - 'how many times more' → value_A / value_B\n"
+    feedback += "   - 'difference' → value_A - value_B\n"
+    feedback += "2. Use CAST(... AS REAL) or multiply by 1.0 to prevent integer division truncation.\n"
+    feedback += "3. Ensure GROUP BY includes all non-aggregated columns in SELECT.\n"
+    
+    used_tables = extract_tables_from_sql(pred_sql)
+    sample_data = get_sample_rows(db_id, used_tables)
+    feedback += f"\n{sample_data}"
+    
+    return feedback
+
+
+def build_feedback(detected_type, detection_info, db_id, question, pred_sql, exec_message):
     """감지된 유형에 따라 적절한 피드백을 생성합니다."""
     if detected_type == "SYNTAX":
         return build_syntax_feedback(exec_message)
@@ -361,6 +486,8 @@ def build_feedback(detected_type, detection_info, db_id, pred_sql, exec_message)
         return build_value_format_feedback(db_id, pred_sql, detection_info.get("mismatches", []))
     elif detected_type == "JOIN_PATH":
         return build_join_path_feedback(db_id, detection_info)
+    elif detected_type == "AGG_LOGIC":
+        return build_agg_logic_feedback(db_id, question, pred_sql, detection_info)
     else:  # GENERAL
         return build_general_feedback(db_id, pred_sql)
 
@@ -428,7 +555,7 @@ Output your response in the following format:
 
 def main():
     print("🚀 자율 수정(Self-healing v2) 에이전트 가동을 시작합니다...")
-    print("📌 3-Type Detector: SYNTAX / VALUE_FORMAT / JOIN_PATH + GENERAL 폴백")
+    print("📌 4-Type Detector: SYNTAX / VALUE_FORMAT / JOIN_PATH / AGG_LOGIC + GENERAL 폴백")
     
     with open(INPUT_PATH, 'r', encoding='utf-8') as f:
         failed_samples = json.load(f)
@@ -468,14 +595,14 @@ def main():
         
         while turn < max_turns and not is_success:
             
-            # 1. 3-Type Detector로 오류 유형 감지
+            # 1. 4-Type Detector로 오류 유형 감지
             detected_type, detection_info = detect_error_type(
-                db_id, current_sql, current_exec_ok, current_exec_msg, schema_text
+                db_id, question, current_sql, current_exec_ok, current_exec_msg, schema_text
             )
             
             # 2. 유형별 맞춤 피드백 생성
             feedback_prompt = build_feedback(
-                detected_type, detection_info, db_id, current_sql, current_exec_msg
+                detected_type, detection_info, db_id, question, current_sql, current_exec_msg
             )
             
             # 3. LLM에게 수정 요청
