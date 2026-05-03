@@ -33,18 +33,21 @@ import openpyxl
 from tqdm import tqdm
 
 DB_BASE_PATH = "./data/dev_databases"
-PROBE_LOG_PATH = "./results/column_reference_probe_log.json"
+PROBE_LOG_PATH = "./results/column_reference_probe_ast_log.json"  # AST 기반으로 변경
 FAILURE_CORPUS_PATH = "./results/failure_corpus_official.json"
-OUTPUT_LOG_PATH = "./results/column_binding_repair_log.json"
+OUTPUT_LOG_PATH = "./results/column_binding_repair_ast_log.json"
 
-# true_wrong_binding으로 수작업 확인된 케이스 (question_id 기준)
+# AST probe에서 actionable(candidate_tables 있음)한 케이스
+# 기존 13건 + 신규 2건(qid=17, 62)
 TRUE_WRONG_BINDING_QIDS = {
-    1251, 1254, 1270, 1302,  # thrombosis_prediction
-    1037,                     # european_football_2
-    962,                      # formula_1
-    682,                      # codebase_community
-    45, 62,                   # california_schools (candidate 있는 것만)
+    1251, 1254, 1270, 1302,  # thrombosis_prediction (e.IGG 등)
+    1037,                     # european_football_2 (p.preferred_foot)
+    962,                      # formula_1 (r.year)
+    682,                      # codebase_community (p.creationdate)
+    45,                       # california_schools (f.admfname1)
+    62,                       # california_schools (frpm.county) ← AST 신규
     94, 149, 168, 119,        # financial
+    17,                       # california_schools (s.charter school number) ← AST 신규
 }
 
 
