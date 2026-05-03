@@ -33,7 +33,7 @@
       {
         "description": "join_insert:Laboratory via patient.ID=Laboratory.ID, e.igg→l.igg",
         "strategy": "join_insertion",
-        "candidate_sql": "SELECT COUNT(DISTINCT p.ID) AS PatientCount\nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nJOIN [Laboratory] l ON p.ID = l.ID\nWHERE l.igg >= 2000",
+        "candidate_sql": "SELECT COUNT(DISTINCT p.ID) AS PatientCount\nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nJOIN \"Laboratory\" \"l\" ON \"p\".\"ID\" = \"l\".\"ID\"\nWHERE \"l\".\"igg\" >= 2000",
         "exec_success": true,
         "exec_error": null,
         "row_count": 1,
@@ -41,7 +41,7 @@
       }
     ],
     "repaired": true,
-    "repair_sql": "SELECT COUNT(DISTINCT p.ID) AS PatientCount\nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nJOIN [Laboratory] l ON p.ID = l.ID\nWHERE l.igg >= 2000",
+    "repair_sql": "SELECT COUNT(DISTINCT p.ID) AS PatientCount\nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nJOIN \"Laboratory\" \"l\" ON \"p\".\"ID\" = \"l\".\"ID\"\nWHERE \"l\".\"igg\" >= 2000",
     "repair_description": "join_insert:Laboratory via patient.ID=Laboratory.ID, e.igg→l.igg"
   },
   {
@@ -78,7 +78,7 @@
       {
         "description": "join_insert:Laboratory via patient.ID=Laboratory.ID, e.iga→l.iga",
         "strategy": "join_insertion",
-        "candidate_sql": "SELECT COUNT(*) \nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nJOIN [Laboratory] l ON p.ID = l.ID\nWHERE l.iga > 80 AND l.iga < 500 \nAND p.`First Date` >= '1990-01-01'",
+        "candidate_sql": "SELECT COUNT(*) \nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nJOIN \"Laboratory\" \"l\" ON \"p\".\"ID\" = \"l\".\"ID\"\nWHERE \"l\".\"iga\" > 80 AND \"l\".\"iga\" < 500 \nAND p.`First Date` >= '1990-01-01'",
         "exec_success": true,
         "exec_error": null,
         "row_count": 1,
@@ -123,7 +123,7 @@
       {
         "description": "join_insert:Laboratory via patient.ID=Laboratory.ID, e.sc170→l.sc170",
         "strategy": "join_insertion",
-        "candidate_sql": "SELECT COUNT(DISTINCT p.ID) AS FemalePatientsWithoutSymptoms\nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nJOIN [Laboratory] l ON p.ID = l.ID\nWHERE p.SEX = 'F' \n  AND l.sc170 IN ('negative', '0') \n  AND e.Symptoms IS NULL",
+        "candidate_sql": "SELECT COUNT(DISTINCT p.ID) AS FemalePatientsWithoutSymptoms\nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nJOIN \"Laboratory\" \"l\" ON \"p\".\"ID\" = \"l\".\"ID\"\nWHERE p.SEX = 'F' \n  AND \"l\".\"sc170\" IN ('negative', '0') \n  AND e.Symptoms IS NULL",
         "exec_success": true,
         "exec_error": null,
         "row_count": 1,
@@ -131,7 +131,7 @@
       }
     ],
     "repaired": true,
-    "repair_sql": "SELECT COUNT(DISTINCT p.ID) AS FemalePatientsWithoutSymptoms\nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nJOIN [Laboratory] l ON p.ID = l.ID\nWHERE p.SEX = 'F' \n  AND l.sc170 IN ('negative', '0') \n  AND e.Symptoms IS NULL",
+    "repair_sql": "SELECT COUNT(DISTINCT p.ID) AS FemalePatientsWithoutSymptoms\nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nJOIN \"Laboratory\" \"l\" ON \"p\".\"ID\" = \"l\".\"ID\"\nWHERE p.SEX = 'F' \n  AND \"l\".\"sc170\" IN ('negative', '0') \n  AND e.Symptoms IS NULL",
     "repair_description": "join_insert:Laboratory via patient.ID=Laboratory.ID, e.sc170→l.sc170"
   },
   {
@@ -204,7 +204,7 @@
       {
         "description": "join_insert:Examination via patient.ID=Examination.ID, l.lac→a.lac",
         "strategy": "join_insertion",
-        "candidate_sql": "SELECT COUNT(DISTINCT p.ID) AS PositiveCoagulationCount\nFROM Patient p\nJOIN Laboratory l ON p.ID = l.ID\nJOIN [Examination] a ON p.ID = a.ID\nWHERE l.CPK < 250 \nAND (l.KCT = '+' OR l.RVVT = '+' OR a.lac = '+')",
+        "candidate_sql": "SELECT COUNT(DISTINCT p.ID) AS PositiveCoagulationCount\nFROM Patient p\nJOIN Laboratory l ON p.ID = l.ID\nJOIN \"Examination\" \"a\" ON \"p\".\"ID\" = \"a\".\"ID\"\nWHERE l.CPK < 250 \nAND (l.KCT = '+' OR l.RVVT = '+' OR \"a\".\"lac\" = '+')",
         "exec_success": false,
         "exec_error": "no such column: l.KCT",
         "row_count": 0,
@@ -213,7 +213,7 @@
       {
         "description": "join_insert:Examination via patient.ID=Examination.ID, l.kct→a.kct",
         "strategy": "join_insertion",
-        "candidate_sql": "SELECT COUNT(DISTINCT p.ID) AS PositiveCoagulationCount\nFROM Patient p\nJOIN Laboratory l ON p.ID = l.ID\nJOIN [Examination] a ON p.ID = a.ID\nWHERE l.CPK < 250 \nAND (a.kct = '+' OR l.RVVT = '+' OR l.LAC = '+')",
+        "candidate_sql": "SELECT COUNT(DISTINCT p.ID) AS PositiveCoagulationCount\nFROM Patient p\nJOIN Laboratory l ON p.ID = l.ID\nJOIN \"Examination\" \"a\" ON \"p\".\"ID\" = \"a\".\"ID\"\nWHERE l.CPK < 250 \nAND (\"a\".\"kct\" = '+' OR l.RVVT = '+' OR l.LAC = '+')",
         "exec_success": false,
         "exec_error": "no such column: l.RVVT",
         "row_count": 0,
@@ -222,7 +222,7 @@
       {
         "description": "join_insert:Examination via patient.ID=Examination.ID, l.rvvt→a.rvvt",
         "strategy": "join_insertion",
-        "candidate_sql": "SELECT COUNT(DISTINCT p.ID) AS PositiveCoagulationCount\nFROM Patient p\nJOIN Laboratory l ON p.ID = l.ID\nJOIN [Examination] a ON p.ID = a.ID\nWHERE l.CPK < 250 \nAND (l.KCT = '+' OR a.rvvt = '+' OR l.LAC = '+')",
+        "candidate_sql": "SELECT COUNT(DISTINCT p.ID) AS PositiveCoagulationCount\nFROM Patient p\nJOIN Laboratory l ON p.ID = l.ID\nJOIN \"Examination\" \"a\" ON \"p\".\"ID\" = \"a\".\"ID\"\nWHERE l.CPK < 250 \nAND (l.KCT = '+' OR \"a\".\"rvvt\" = '+' OR l.LAC = '+')",
         "exec_success": false,
         "exec_error": "no such column: l.KCT",
         "row_count": 0,
@@ -267,7 +267,7 @@
       {
         "description": "join_insert:Player_Attributes via player.player_api_id=Player_Attributes.player_api_id, p.preferred_foot→l.preferred_foot",
         "strategy": "join_insertion",
-        "candidate_sql": "SELECT \n    (SUM(CASE WHEN l.preferred_foot = 'left' THEN 1 ELSE 0 END) * 100.0) / COUNT(p.player_fifa_api_id) AS percentage_left_foot\nFROM \n    Player p\nJOIN [Player_Attributes] l ON p.player_api_id = l.player_api_id\nWHERE \n    strftime('%Y', p.birthday) BETWEEN '1987' AND '1992'",
+        "candidate_sql": "SELECT \n    (SUM(CASE WHEN \"l\".\"preferred_foot\" = 'left' THEN 1 ELSE 0 END) * 100.0) / COUNT(p.player_fifa_api_id) AS percentage_left_foot\nFROM \n    Player p\nJOIN \"Player_Attributes\" \"l\" ON \"p\".\"player_api_id\" = \"l\".\"player_api_id\"\nWHERE \n    strftime('%Y', p.birthday) BETWEEN '1987' AND '1992'",
         "exec_success": true,
         "exec_error": null,
         "row_count": 1,
@@ -275,7 +275,7 @@
       }
     ],
     "repaired": true,
-    "repair_sql": "SELECT \n    (SUM(CASE WHEN l.preferred_foot = 'left' THEN 1 ELSE 0 END) * 100.0) / COUNT(p.player_fifa_api_id) AS percentage_left_foot\nFROM \n    Player p\nJOIN [Player_Attributes] l ON p.player_api_id = l.player_api_id\nWHERE \n    strftime('%Y', p.birthday) BETWEEN '1987' AND '1992'",
+    "repair_sql": "SELECT \n    (SUM(CASE WHEN \"l\".\"preferred_foot\" = 'left' THEN 1 ELSE 0 END) * 100.0) / COUNT(p.player_fifa_api_id) AS percentage_left_foot\nFROM \n    Player p\nJOIN \"Player_Attributes\" \"l\" ON \"p\".\"player_api_id\" = \"l\".\"player_api_id\"\nWHERE \n    strftime('%Y', p.birthday) BETWEEN '1987' AND '1992'",
     "repair_description": "join_insert:Player_Attributes via player.player_api_id=Player_Attributes.player_api_id, p.preferred_foot→l.preferred_foot"
   },
   {
@@ -320,7 +320,7 @@
       {
         "description": "join_insert:races via results.raceId=races.raceId, r.year→a.year",
         "strategy": "join_insertion",
-        "candidate_sql": "SELECT \n    (COUNT(DISTINCT l.driverId) * 100.0 / NULLIF(COUNT(DISTINCT r.driverId), 0)) AS percentage\nFROM \n    results r\nJOIN \n    drivers d ON r.driverId = d.driverId\nJOIN \n    lapTimes l ON r.raceId = l.raceId AND r.driverId = l.driverId\nJOIN [races] a ON r.raceId = a.raceId\nWHERE \n    d.dob < '1985-01-01' \n    AND a.year BETWEEN 2000 AND 2005 \n    AND l.lap > 50",
+        "candidate_sql": "SELECT \n    (COUNT(DISTINCT l.driverId) * 100.0 / NULLIF(COUNT(DISTINCT r.driverId), 0)) AS percentage\nFROM \n    results r\nJOIN \n    drivers d ON r.driverId = d.driverId\nJOIN \n    lapTimes l ON r.raceId = l.raceId AND r.driverId = l.driverId\nJOIN \"races\" \"a\" ON \"r\".\"raceId\" = \"a\".\"raceId\"\nWHERE \n    d.dob < '1985-01-01' \n    AND \"a\".\"year\" BETWEEN 2000 AND 2005 \n    AND l.lap > 50",
         "exec_success": true,
         "exec_error": null,
         "row_count": 1,
@@ -376,7 +376,7 @@
       {
         "description": "join_insert:comments via posts.Id=comments.PostId, p.creationdate→l.creationdate",
         "strategy": "join_insertion",
-        "candidate_sql": "SELECT p.Id, p.OwnerDisplayName\nFROM posts p\nJOIN [comments] l ON p.Id = l.PostId\nWHERE p.FavoriteCount = (\n    SELECT MAX(FavoriteCount)\n    FROM posts\n    WHERE strftime('%Y', CreationDate) = '2010'\n)\nAND strftime('%Y', l.creationdate) = '2010'",
+        "candidate_sql": "SELECT p.Id, p.OwnerDisplayName\nFROM posts p\nJOIN \"comments\" \"l\" ON \"p\".\"Id\" = \"l\".\"PostId\"\nWHERE p.FavoriteCount = (\n    SELECT MAX(FavoriteCount)\n    FROM posts\n    WHERE strftime('%Y', CreationDate) = '2010'\n)\nAND strftime('%Y', \"l\".\"creationdate\") = '2010'",
         "exec_success": true,
         "exec_error": null,
         "row_count": 2,
@@ -385,7 +385,7 @@
       {
         "description": "join_insert:postHistory via posts.Id=postHistory.PostId, p.creationdate→l.creationdate",
         "strategy": "join_insertion",
-        "candidate_sql": "SELECT p.Id, p.OwnerDisplayName\nFROM posts p\nJOIN [postHistory] l ON p.Id = l.PostId\nWHERE p.FavoriteCount = (\n    SELECT MAX(FavoriteCount)\n    FROM posts\n    WHERE strftime('%Y', CreationDate) = '2010'\n)\nAND strftime('%Y', l.creationdate) = '2010'",
+        "candidate_sql": "SELECT p.Id, p.OwnerDisplayName\nFROM posts p\nJOIN \"postHistory\" \"l\" ON \"p\".\"Id\" = \"l\".\"PostId\"\nWHERE p.FavoriteCount = (\n    SELECT MAX(FavoriteCount)\n    FROM posts\n    WHERE strftime('%Y', CreationDate) = '2010'\n)\nAND strftime('%Y', \"l\".\"creationdate\") = '2010'",
         "exec_success": true,
         "exec_error": null,
         "row_count": 5,
@@ -430,10 +430,10 @@
       {
         "description": "join_insert:frpm via schools.CDSCode=frpm.CDSCode, s.charter school number→l.charter school number",
         "strategy": "join_insertion",
-        "candidate_sql": "SELECT s.\"Charter School Number\", AVG(sa.AvgScrWrite) AS Average_Writing_Score\nFROM satscores sa\nJOIN schools s ON sa.cds = s.CDSCode\nJOIN [frpm] l ON s.CDSCode = l.CDSCode\nWHERE sa.AvgScrWrite > 499 AND s.\"Charter School Number\" IS NOT NULL\nGROUP BY s.\"Charter School Number\"\nORDER BY Average_Writing_Score DESC",
-        "exec_success": false,
-        "exec_error": "no such column: s.Charter School Number",
-        "row_count": 0,
+        "candidate_sql": "SELECT \"l\".\"charter school number\", AVG(sa.AvgScrWrite) AS Average_Writing_Score\nFROM satscores sa\nJOIN schools s ON sa.cds = s.CDSCode\nJOIN \"frpm\" \"l\" ON \"s\".\"CDSCode\" = \"l\".\"CDSCode\"\nWHERE sa.AvgScrWrite > 499 AND \"l\".\"charter school number\" IS NOT NULL\nGROUP BY \"l\".\"charter school number\"\nORDER BY Average_Writing_Score DESC",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 56,
         "ex_pass": false
       }
     ],
@@ -478,7 +478,7 @@
       {
         "description": "alias_swap:f.admfname1→s.admfname1",
         "strategy": "alias_swap",
-        "candidate_sql": "SELECT s.School AS School_Name, AVG(sa.AvgScrWrite) AS Average_Writing_Score\nFROM schools s\nJOIN frpm f ON s.CDSCode = f.CDSCode\nJOIN satscores sa ON s.CDSCode = sa.cds\nWHERE s.admfname1 = 'Ricci' AND f.AdmLName1 = 'Ulrich'\nGROUP BY s.School;",
+        "candidate_sql": "SELECT s.School AS School_Name, AVG(sa.AvgScrWrite) AS Average_Writing_Score\nFROM schools s\nJOIN frpm f ON s.CDSCode = f.CDSCode\nJOIN satscores sa ON s.CDSCode = sa.cds\nWHERE \"s\".\"admfname1\" = 'Ricci' AND f.AdmLName1 = 'Ulrich'\nGROUP BY s.School;",
         "exec_success": false,
         "exec_error": "no such column: f.AdmLName1",
         "row_count": 0,
@@ -487,7 +487,7 @@
       {
         "description": "alias_swap:f.admlname1→s.admlname1",
         "strategy": "alias_swap",
-        "candidate_sql": "SELECT s.School AS School_Name, AVG(sa.AvgScrWrite) AS Average_Writing_Score\nFROM schools s\nJOIN frpm f ON s.CDSCode = f.CDSCode\nJOIN satscores sa ON s.CDSCode = sa.cds\nWHERE f.AdmFName1 = 'Ricci' AND s.admlname1 = 'Ulrich'\nGROUP BY s.School;",
+        "candidate_sql": "SELECT s.School AS School_Name, AVG(sa.AvgScrWrite) AS Average_Writing_Score\nFROM schools s\nJOIN frpm f ON s.CDSCode = f.CDSCode\nJOIN satscores sa ON s.CDSCode = sa.cds\nWHERE f.AdmFName1 = 'Ricci' AND \"s\".\"admlname1\" = 'Ulrich'\nGROUP BY s.School;",
         "exec_success": false,
         "exec_error": "no such column: f.AdmFName1",
         "row_count": 0,
@@ -524,7 +524,7 @@
       {
         "description": "table_ref_swap:frpm.county→schools.county",
         "strategy": "table_ref_swap",
-        "candidate_sql": "SELECT COUNT(*) AS TotalNonCharteredSchools\nFROM frpm\nJOIN schools ON frpm.CDSCode = schools.CDSCode\nWHERE schools.Charter = 0\nAND frpm.`Percent (%) Eligible Free (K-12)` < 0.18\nAND schools.county Name = 'Los Angeles';",
+        "candidate_sql": "SELECT COUNT(*) AS TotalNonCharteredSchools\nFROM frpm\nJOIN schools ON frpm.CDSCode = schools.CDSCode\nWHERE schools.Charter = 0\nAND frpm.`Percent (%) Eligible Free (K-12)` < 0.18\nAND \"schools\".\"county\" Name = 'Los Angeles';",
         "exec_success": false,
         "exec_error": "near \"Name\": syntax error",
         "row_count": 0,
@@ -569,7 +569,7 @@
       {
         "description": "join_insert:district via client.district_id=district.district_id, d.a11→b.a11",
         "strategy": "join_insertion",
-        "candidate_sql": "WITH SalaryStats AS (\n    SELECT \n        b.a11 AS average_salary,\n        c.client_id,\n        c.gender,\n        c.birth_date,\n        a.account_id\n    FROM \n        client c\n    JOIN \n        disp d ON c.client_id = d.client_id\n    JOIN \n        account a ON d.account_id = a.account_id\nJOIN [district] b ON c.district_id = b.district_id\nWHERE \n        c.gender = 'F'\n),\nOldestFemale AS (\n    SELECT \n        client_id,\n        MIN(birth_date) AS oldest_birth_date\n    FROM \n        SalaryStats\n    GROUP BY \n        client_id\n),\nLowestAvgSalary AS (\n    SELECT \n        MIN(average_salary) AS lowest_salary\n    FROM \n        SalaryStats\n    WHERE \n        client_id IN (SELECT client_id FROM OldestFemale)\n),\nHighestAvgSalary AS (\n    SELECT \n        MAX(average_salary) AS highest_salary\n    FROM \n        SalaryStats\n)\nSELECT \n    a.account_id,\n    (h.highest_salary - l.lowest_salary) AS salary_gap\nFROM \n    LowestAvgSalary l,\n    HighestAvgSalary h,\n    SalaryStats a\nWHERE \n    a.average_salary = l.lowest_salary",
+        "candidate_sql": "WITH SalaryStats AS (\n    SELECT \n        \"b\".\"a11\" AS average_salary,\n        c.client_id,\n        c.gender,\n        c.birth_date,\n        a.account_id\n    FROM \n        client c\n    JOIN \n        disp d ON c.client_id = d.client_id\n    JOIN \n        account a ON d.account_id = a.account_id\nJOIN \"district\" \"b\" ON \"c\".\"district_id\" = \"b\".\"district_id\"\nWHERE \n        c.gender = 'F'\n),\nOldestFemale AS (\n    SELECT \n        client_id,\n        MIN(birth_date) AS oldest_birth_date\n    FROM \n        SalaryStats\n    GROUP BY \n        client_id\n),\nLowestAvgSalary AS (\n    SELECT \n        MIN(average_salary) AS lowest_salary\n    FROM \n        SalaryStats\n    WHERE \n        client_id IN (SELECT client_id FROM OldestFemale)\n),\nHighestAvgSalary AS (\n    SELECT \n        MAX(average_salary) AS highest_salary\n    FROM \n        SalaryStats\n)\nSELECT \n    a.account_id,\n    (h.highest_salary - l.lowest_salary) AS salary_gap\nFROM \n    LowestAvgSalary l,\n    HighestAvgSalary h,\n    SalaryStats a\nWHERE \n    a.average_salary = l.lowest_salary",
         "exec_success": true,
         "exec_error": null,
         "row_count": 20,
@@ -617,7 +617,7 @@
         "exec_message": "ok"
       }
     ],
-    "candidates_tried": 2,
+    "candidates_tried": 4,
     "needs_join_insertion": [
       {
         "qualifier": "d",
@@ -631,7 +631,25 @@
       {
         "description": "alias_swap:d.account_id→a.account_id",
         "strategy": "alias_swap",
-        "candidate_sql": "SELECT DISTINCT d.A2 AS account_type\nFROM account a\nJOIN disp d ON a.account_id = a.account_id\nJOIN district d ON a.district_id = d.district_id\nWHERE d.A11 > 8000 AND d.A11 <= 9000\nAND d.type != 'OWNER'\nAND a.account_id NOT IN (SELECT account_id FROM loan);",
+        "candidate_sql": "SELECT DISTINCT d.A2 AS account_type\nFROM account a\nJOIN disp d ON a.account_id = \"a\".\"account_id\"\nJOIN district d ON a.district_id = d.district_id\nWHERE d.A11 > 8000 AND d.A11 <= 9000\nAND d.type != 'OWNER'\nAND a.account_id NOT IN (SELECT account_id FROM loan);",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 50,
+        "ex_pass": false
+      },
+      {
+        "description": "alias_swap:d.account_id→d.account_id",
+        "strategy": "alias_swap",
+        "candidate_sql": "SELECT DISTINCT d.A2 AS account_type\nFROM account a\nJOIN disp d ON a.account_id = \"d\".\"account_id\"\nJOIN district d ON a.district_id = d.district_id\nWHERE d.A11 > 8000 AND d.A11 <= 9000\nAND d.type != 'OWNER'\nAND a.account_id NOT IN (SELECT account_id FROM loan);",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 50,
+        "ex_pass": false
+      },
+      {
+        "description": "alias_swap:d.type→d.type",
+        "strategy": "alias_swap",
+        "candidate_sql": "SELECT DISTINCT d.A2 AS account_type\nFROM account a\nJOIN disp d ON a.account_id = d.account_id\nJOIN district d ON a.district_id = d.district_id\nWHERE d.A11 > 8000 AND d.A11 <= 9000\nAND \"d\".\"type\" != 'OWNER'\nAND a.account_id NOT IN (SELECT account_id FROM loan);",
         "exec_success": true,
         "exec_error": null,
         "row_count": 50,
@@ -640,7 +658,7 @@
       {
         "description": "join_insert:card via disp.disp_id=card.disp_id, d.type→l.type",
         "strategy": "join_insertion",
-        "candidate_sql": "SELECT DISTINCT d.A2 AS account_type\nFROM account a\nJOIN disp d ON a.account_id = d.account_id\nJOIN district d ON a.district_id = d.district_id\nJOIN [card] l ON disp.disp_id = l.disp_id\nWHERE d.A11 > 8000 AND d.A11 <= 9000\nAND l.type != 'OWNER'\nAND a.account_id NOT IN (SELECT account_id FROM loan)",
+        "candidate_sql": "SELECT DISTINCT d.A2 AS account_type\nFROM account a\nJOIN disp d ON a.account_id = d.account_id\nJOIN district d ON a.district_id = d.district_id\nJOIN \"card\" \"l\" ON \"disp\".\"disp_id\" = \"l\".\"disp_id\"\nWHERE d.A11 > 8000 AND d.A11 <= 9000\nAND \"l\".\"type\" != 'OWNER'\nAND a.account_id NOT IN (SELECT account_id FROM loan)",
         "exec_success": false,
         "exec_error": "no such column: disp.disp_id",
         "row_count": 0,
@@ -690,7 +708,7 @@
       {
         "description": "alias_swap:d.district_id→a.district_id",
         "strategy": "alias_swap",
-        "candidate_sql": "SELECT \n    (COUNT(CASE WHEN c.gender = 'F' THEN 1 END) * 100.0 / COUNT(*)) AS percentage_women\nFROM \n    account a\nJOIN \n    client c ON a.account_id = (SELECT d.account_id FROM disp d WHERE d.client_id = c.client_id)\nJOIN \n    district d ON a.district_id = a.district_id\nWHERE \n    d.A11 > 10000;",
+        "candidate_sql": "SELECT \n    (COUNT(CASE WHEN c.gender = 'F' THEN 1 END) * 100.0 / COUNT(*)) AS percentage_women\nFROM \n    account a\nJOIN \n    client c ON a.account_id = (SELECT d.account_id FROM disp d WHERE d.client_id = c.client_id)\nJOIN \n    district d ON a.district_id = \"a\".\"district_id\"\nWHERE \n    d.A11 > 10000;",
         "exec_success": true,
         "exec_error": null,
         "row_count": 1,
@@ -699,7 +717,7 @@
       {
         "description": "alias_swap:d.district_id→c.district_id",
         "strategy": "alias_swap",
-        "candidate_sql": "SELECT \n    (COUNT(CASE WHEN c.gender = 'F' THEN 1 END) * 100.0 / COUNT(*)) AS percentage_women\nFROM \n    account a\nJOIN \n    client c ON a.account_id = (SELECT d.account_id FROM disp d WHERE d.client_id = c.client_id)\nJOIN \n    district d ON a.district_id = c.district_id\nWHERE \n    d.A11 > 10000;",
+        "candidate_sql": "SELECT \n    (COUNT(CASE WHEN c.gender = 'F' THEN 1 END) * 100.0 / COUNT(*)) AS percentage_women\nFROM \n    account a\nJOIN \n    client c ON a.account_id = (SELECT d.account_id FROM disp d WHERE d.client_id = c.client_id)\nJOIN \n    district d ON a.district_id = \"c\".\"district_id\"\nWHERE \n    d.A11 > 10000;",
         "exec_success": true,
         "exec_error": null,
         "row_count": 1,
@@ -708,7 +726,7 @@
       {
         "description": "alias_swap:d.a11→d.a11",
         "strategy": "alias_swap",
-        "candidate_sql": "SELECT \n    (COUNT(CASE WHEN c.gender = 'F' THEN 1 END) * 100.0 / COUNT(*)) AS percentage_women\nFROM \n    account a\nJOIN \n    client c ON a.account_id = (SELECT d.account_id FROM disp d WHERE d.client_id = c.client_id)\nJOIN \n    district d ON a.district_id = d.district_id\nWHERE \n    d.a11 > 10000;",
+        "candidate_sql": "SELECT \n    (COUNT(CASE WHEN c.gender = 'F' THEN 1 END) * 100.0 / COUNT(*)) AS percentage_women\nFROM \n    account a\nJOIN \n    client c ON a.account_id = (SELECT d.account_id FROM disp d WHERE d.client_id = c.client_id)\nJOIN \n    district d ON a.district_id = d.district_id\nWHERE \n    \"d\".\"a11\" > 10000;",
         "exec_success": true,
         "exec_error": null,
         "row_count": 1,
@@ -757,7 +775,7 @@
       {
         "description": "alias_swap:c.account_id→a.account_id",
         "strategy": "alias_swap",
-        "candidate_sql": "SELECT a.account_id, d.A2 AS district_name, d.A3 AS district_region\nFROM account a\nJOIN district d ON a.district_id = d.district_id\nJOIN trans t ON a.account_id = t.account_id\nJOIN card c ON a.account_id = a.account_id\nWHERE strftime('%Y', a.date) = '1993' \nAND c.type = 'POPLATEK PO OBRATU' \nAND c.issued > t.date;",
+        "candidate_sql": "SELECT a.account_id, d.A2 AS district_name, d.A3 AS district_region\nFROM account a\nJOIN district d ON a.district_id = d.district_id\nJOIN trans t ON a.account_id = t.account_id\nJOIN card c ON a.account_id = \"a\".\"account_id\"\nWHERE strftime('%Y', a.date) = '1993' \nAND c.type = 'POPLATEK PO OBRATU' \nAND c.issued > t.date;",
         "exec_success": true,
         "exec_error": null,
         "row_count": 0,
@@ -766,7 +784,7 @@
       {
         "description": "join_insert:disp via account.account_id=disp.account_id, c.account_id→l.account_id",
         "strategy": "join_insertion",
-        "candidate_sql": "SELECT a.account_id, d.A2 AS district_name, d.A3 AS district_region\nFROM account a\nJOIN district d ON a.district_id = d.district_id\nJOIN trans t ON a.account_id = t.account_id\nJOIN card c ON a.account_id = l.account_id\nJOIN [disp] l ON a.account_id = l.account_id\nWHERE strftime('%Y', a.date) = '1993' \nAND c.type = 'POPLATEK PO OBRATU' \nAND c.issued > t.date",
+        "candidate_sql": "SELECT a.account_id, d.A2 AS district_name, d.A3 AS district_region\nFROM account a\nJOIN district d ON a.district_id = d.district_id\nJOIN trans t ON a.account_id = t.account_id\nJOIN card c ON a.account_id = \"l\".\"account_id\"\nJOIN \"disp\" \"l\" ON \"a\".\"account_id\" = \"l\".\"account_id\"\nWHERE strftime('%Y', a.date) = '1993' \nAND c.type = 'POPLATEK PO OBRATU' \nAND c.issued > t.date",
         "exec_success": true,
         "exec_error": null,
         "row_count": 0,
