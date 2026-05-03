@@ -86,6 +86,47 @@ SQL_KEYWORDS = {
 }
 
 
+def quote_ident(name):
+    """SQLite identifier quoting"""
+    if name is None:
+        return ""
+    name = str(name)
+    return '"' + name.replace('"', '""') + '"'
+
+
+def qcol(alias, column):
+    """alias.column 형태를 안전하게 생성"""
+    return f"{quote_ident(alias)}.{quote_ident(column)}"
+
+
+def qtable(table):
+    """table name 안전 quoting"""
+    return quote_ident(table)
+
+
+def replace_qualified_column(sql, old_qualifier, old_column, new_qualifier, new_column):
+    """qualified column reference를 안전하게 교체
+    
+    다음 패턴을 모두 처리:
+      s.column
+      s."column"
+      "s"."column"
+    """
+    replacement = qcol(new_qualifier, new_column)
+
+    patterns = [
+        rf'{re.escape(old_qualifier)}\s*\.\s*"{re.escape(old_column)}"',
+        rf'"{re.escape(old_qualifier)}"\s*\.\s*"{re.escape(old_column)}"',
+        rf'{re.escape(old_qualifier)}\s*\.\s*{re.escape(old_column)}',
+    ]
+
+    new_sql = sql
+    for p in patterns:
+        new_sql = re.sub(p, replacement, new_sql, flags=re.IGNORECASE)
+
+    return new_sql
+
+
 def find_join_insert_pos(sql):
     """JOIN 절을 삽입할 올바른 위치 찾기
     WHERE, GROUP BY, HAVING, ORDER BY, LIMIT 중 가장 앞에 오는 것 앞에 삽입
@@ -194,10 +235,10 @@ def generate_join_insertion_sqls(db_id, pred_sql, needs_join, alias_map):
         if not new_alias:
             new_alias = cand_table_lower[:3]  # 테이블명 앞 3글자
 
-        # JOIN 절 생성
+        # JOIN 절 생성 (identifier quoting 적용)
         join_clause = (
-            f"JOIN [{cand_table}] {new_alias} "
-            f"ON {anchor_alias}.{join_col_anchor} = {new_alias}.{join_col_cand}"
+            f"JOIN {qtable(cand_table)} {quote_ident(new_alias)} "
+            f"ON {qcol(anchor_alias, join_col_anchor)} = {qcol(new_alias, join_col_cand)}"
         )
 
         # pred SQL에 JOIN 삽입 — WHERE/GROUP BY/ORDER BY 등 앞에 삽입
@@ -205,13 +246,8 @@ def generate_join_insertion_sqls(db_id, pred_sql, needs_join, alias_map):
         base = pred_sql.rstrip().rstrip(";")
         new_sql = base[:insert_pos].rstrip() + "\n" + join_clause + "\n" + base[insert_pos:].lstrip()
 
-        # column reference 교체: qualifier.column → new_alias.column
-        new_sql = re.sub(
-            rf'\b{re.escape(qualifier)}\.{re.escape(column)}\b',
-            f'{new_alias}.{column}',
-            new_sql,
-            flags=re.IGNORECASE
-        )
+        # column reference 교체 (identifier quoting 적용)
+        new_sql = replace_qualified_column(new_sql, qualifier, column, new_alias, column)
 
         if new_sql != pred_sql:
             candidates.append((
@@ -271,13 +307,8 @@ def generate_candidate_sqls(pred_sql, invalid_refs):
                     cand_alias = None
 
                 if cand_alias:
-                    # column reference만 교체: qualifier.column → cand_alias.column
-                    swapped = re.sub(
-                        rf'\b{re.escape(qualifier)}\.{re.escape(column)}\b',
-                        f'{cand_alias}.{column}',
-                        pred_sql,
-                        flags=re.IGNORECASE
-                    )
+                    # column reference만 교체: qualifier.column → cand_alias.column (quoting 적용)
+                    swapped = replace_qualified_column(pred_sql, qualifier, column, cand_alias, column)
                     if swapped != pred_sql:
                         candidates.append((
                             swapped,
@@ -285,13 +316,8 @@ def generate_candidate_sqls(pred_sql, invalid_refs):
                             "alias_swap"
                         ))
                 else:
-                    # cand_table이 있는데 alias가 없으면 테이블명 직접 사용
-                    swapped = re.sub(
-                        rf'\b{re.escape(qualifier)}\.{re.escape(column)}\b',
-                        f'{cand_table}.{column}',
-                        pred_sql,
-                        flags=re.IGNORECASE
-                    )
+                    # cand_table이 있는데 alias가 없으면 테이블명 직접 사용 (quoting 적용)
+                    swapped = replace_qualified_column(pred_sql, qualifier, column, cand_table, column)
                     if swapped != pred_sql:
                         candidates.append((
                             swapped,
