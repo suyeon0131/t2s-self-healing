@@ -1,0 +1,5644 @@
+[
+  {
+    "question_id": 1472,
+    "db_id": "debit_card_specializing",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "JOIN_PATH",
+    "pred_sql": "SELECT CustomerID, MIN(Consumption) AS LeastConsumption\nFROM yearmonth\nWHERE Date BETWEEN '201201' AND '201212'\nGROUP BY CustomerID\nORDER BY LeastConsumption\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "yearmonth": "yearmonth"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1479,
+    "db_id": "debit_card_specializing",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT strftime('%Y', Date) AS Year, SUM(Consumption) AS TotalConsumption\nFROM yearmonth\nWHERE CustomerID IN (SELECT CustomerID FROM customers WHERE Currency = 'CZK')\nGROUP BY Year\nORDER BY TotalConsumption DESC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "yearmonth": "yearmonth",
+        "customers": "customers"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1480,
+    "db_id": "debit_card_specializing",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT SUBSTR(Date, 5, 2) AS Month, SUM(Consumption) AS TotalConsumption\nFROM yearmonth\nJOIN customers ON yearmonth.CustomerID = customers.CustomerID\nWHERE SUBSTR(Date, 1, 4) = '2013' AND customers.Segment = 'SME'\nGROUP BY Month\nORDER BY TotalConsumption DESC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "yearmonth": "yearmonth",
+        "customers": "customers"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1481,
+    "db_id": "debit_card_specializing",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (VALUE_FORMAT, LOGIC_STRUCT)",
+    "pred_sql": "WITH AnnualConsumption AS (\n    SELECT \n        c.Segment,\n        AVG(ym.Consumption) AS AvgConsumption\n    FROM \n        yearmonth ym\n    JOIN \n        customers c ON ym.CustomerID = c.CustomerID\n    WHERE \n        ym.Date BETWEEN '201301' AND '201312'\n    GROUP BY \n        c.Segment, c.CustomerID\n),\nMinConsumption AS (\n    SELECT \n        Segment,\n        MIN(AvgConsumption) AS MinAvgConsumption\n    FROM \n        AnnualConsumption\n    GROUP BY \n        Segment\n),\nAnnualAverage AS (\n    SELECT \n        a.Segment,\n        a.AvgConsumption - m.MinAvgConsumption AS AnnualAvg\n    FROM \n        AnnualConsumption a\n    JOIN \n        MinConsumption m ON a.Segment = m.Segment\n)\nSELECT \n    (SELECT AnnualAvg FROM AnnualAverage WHERE Segment = 'SME') - \n    (SELECT AnnualAvg FROM AnnualAverage WHERE Segment = 'LAM') AS SME_LAM_Difference,\n    (SELECT AnnualAvg FROM AnnualAverage WHERE Segment = 'LAM') - \n    (SELECT AnnualAvg FROM AnnualAverage WHERE Segment = 'KAM') AS LAM_KAM_Difference,\n    (SELECT AnnualAvg FROM AnnualAverage WHERE Segment = 'KAM') - \n    (SELECT AnnualAvg FROM AnnualAverage WHERE Segment = 'SME') AS KAM_SME_Difference\nFROM \n    AnnualAverage\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "annualaverage": "__cte__annualaverage",
+        "ym": "yearmonth",
+        "c": "customers",
+        "annualconsumption": "__cte__annualconsumption",
+        "a": "__cte__annualconsumption",
+        "m": "__cte__minconsumption"
+      },
+      "cte_names": [
+        "annualconsumption",
+        "minconsumption",
+        "annualaverage"
+      ],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1482,
+    "db_id": "debit_card_specializing",
+    "difficulty": "challenging",
+    "error_type": "Syntax Error",
+    "manual_label": "COMPLEX (LOGIC_STRUCT, AGG_LOGIC, VALUE_FORMAT)",
+    "pred_sql": "WITH Consumption AS (\n    SELECT \n        strftime('%Y', Date) AS Year,\n        Segment,\n        SUM(Consumption) AS TotalConsumption\n    FROM \n        yearmonth\n    WHERE \n        strftime('%Y', Date) IN ('2012', '2013')\n    GROUP BY \n        Year, Segment\n),\nConsumptionChange AS (\n    SELECT \n        c1.Segment,\n        c1.TotalConsumption AS Consumption2013,\n        c2.TotalConsumption AS Consumption2012,\n        (c1.TotalConsumption - c2.TotalConsumption) AS Increase,\n        ((c1.TotalConsumption - c2.TotalConsumption) / c1.TotalConsumption) * 100 AS PercentageIncrease\n    FROM \n        Consumption c1\n    JOIN \n        Consumption c2 ON c1.Segment = c2.Segment AND c2.Year = '2012' AND c1.Year = '2013'\n)\nSELECT \n    Segment,\n    PercentageIncrease\nFROM \n    ConsumptionChange\nORDER BY \n    PercentageIncrease ASC;",
+    "column_probe": {
+      "alias_map": {
+        "consumptionchange": "__cte__consumptionchange",
+        "yearmonth": "yearmonth",
+        "c1": "__cte__consumption",
+        "c2": "__cte__consumption"
+      },
+      "cte_names": [
+        "consumption",
+        "consumptionchange"
+      ],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1484,
+    "db_id": "debit_card_specializing",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "VALUE_FORMAT",
+    "pred_sql": "SELECT \n    (SELECT COUNT(*) FROM gasstations WHERE Country = 'CZE' AND Segment = 'discount') -\n    (SELECT COUNT(*) FROM gasstations WHERE Country = 'SVK' AND Segment = 'discount') AS Difference",
+    "column_probe": {
+      "alias_map": {
+        "gasstations": "gasstations"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1498,
+    "db_id": "debit_card_specializing",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (LOGIC_STRUCT, AGG_LOGIC)",
+    "pred_sql": "SELECT MAX(Consumption) AS HighestMonthlyConsumption\nFROM yearmonth\nWHERE Date LIKE '2012-%';",
+    "column_probe": {
+      "alias_map": {
+        "yearmonth": "yearmonth"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1500,
+    "db_id": "debit_card_specializing",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (JOIN_PATH, VALUE_FORMAT)",
+    "pred_sql": "SELECT p.Description\nFROM transactions_1k t\nJOIN products p ON t.ProductID = p.ProductID\nWHERE strftime('%Y%m', t.Date) = '201309';",
+    "column_probe": {
+      "alias_map": {
+        "t": "transactions_1k",
+        "p": "products"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1501,
+    "db_id": "debit_card_specializing",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (JOIN_PATH, VALUE_FORMAT)",
+    "pred_sql": "SELECT DISTINCT g.Country\nFROM gasstations g\nJOIN transactions_1k t ON g.GasStationID = t.GasStationID\nWHERE strftime('%Y%m', t.Date) = '201306';",
+    "column_probe": {
+      "alias_map": {
+        "g": "gasstations",
+        "t": "transactions_1k"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1505,
+    "db_id": "debit_card_specializing",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT COUNT(DISTINCT y.CustomerID) AS CustomerCount\nFROM yearmonth y\nJOIN customers c ON y.CustomerID = c.CustomerID\nWHERE c.Currency = 'EUR' AND y.Consumption > 1000;",
+    "column_probe": {
+      "alias_map": {
+        "y": "yearmonth",
+        "c": "customers"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1524,
+    "db_id": "debit_card_specializing",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT c.Segment\nFROM transactions_1k t\nJOIN customers c ON t.CustomerID = c.CustomerID\nJOIN gasstations g ON t.GasStationID = g.GasStationID\nWHERE t.Date = '2012-08-24' AND t.Amount = 548.4;",
+    "column_probe": {
+      "alias_map": {
+        "t": "transactions_1k",
+        "c": "customers",
+        "g": "gasstations"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1528,
+    "db_id": "debit_card_specializing",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT \n    (COUNT(CASE WHEN g.Segment = 'premium' THEN 1 END) * 100.0 / COUNT(*)) AS premium_percentage\nFROM \n    gasstations g\nWHERE \n    g.Country = 'SVK';",
+    "column_probe": {
+      "alias_map": {
+        "g": "gasstations"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1529,
+    "db_id": "debit_card_specializing",
+    "difficulty": "moderate",
+    "error_type": "Syntax Error",
+    "manual_label": "COMPLEX (JOIN_PATH, COLUMN_SELECT, VALUE_FORMAT)",
+    "pred_sql": "SELECT SUM(Amount) AS TotalSpent\nFROM transactions_1k\nWHERE CustomerID = 38508 AND GasStationID IS NOT NULL;\n\nSELECT SUM(Amount) AS TotalSpentJanuary2012\nFROM transactions_1k\nWHERE CustomerID = 38508 AND Date LIKE '201201%';",
+    "column_probe": {
+      "alias_map": {
+        "transactions_1k": "transactions_1k"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1531,
+    "db_id": "debit_card_specializing",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (LOGIC_STRUCT, AGG_LOGIC, JOIN_PATH)",
+    "pred_sql": "SELECT c.CustomerID, \n       SUM(t.Price) / SUM(t.Amount) AS AveragePricePerItem, \n       c.Currency\nFROM transactions_1k t\nJOIN customers c ON t.CustomerID = c.CustomerID\nGROUP BY c.CustomerID\nORDER BY SUM(t.Price) DESC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "t": "transactions_1k",
+        "c": "customers"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1533,
+    "db_id": "debit_card_specializing",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (COLUMN_SELECT, VALUE_FORMAT)",
+    "pred_sql": "SELECT y.CustomerID, y.Consumption\nFROM yearmonth y\nJOIN transactions_1k t ON y.CustomerID = t.CustomerID\nWHERE t.ProductID = 5 \n  AND (t.Price / t.Amount) > 29.00 \n  AND y.Date = '201208';",
+    "column_probe": {
+      "alias_map": {
+        "y": "yearmonth",
+        "t": "transactions_1k"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1312,
+    "db_id": "student_club",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT m.link_to_major, maj.major_name \nFROM member m \nJOIN major maj ON m.link_to_major = maj.major_id \nWHERE m.first_name = 'Angela' AND m.last_name = 'Sanders';",
+    "column_probe": {
+      "alias_map": {
+        "m": "member",
+        "maj": "major"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1322,
+    "db_id": "student_club",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (LOGIC_STRUCT, COLUMN_SELECT)",
+    "pred_sql": "SELECT COUNT(*) \nFROM event \nWHERE type = 'Meeting' \nAND event_id IN (\n    SELECT link_to_event \n    FROM attendance \n    GROUP BY link_to_event \n    HAVING COUNT(link_to_member) > 10\n);",
+    "column_probe": {
+      "alias_map": {
+        "event": "event",
+        "attendance": "attendance"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1334,
+    "db_id": "student_club",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT first_name || ' ' || last_name AS full_name\nFROM member\nJOIN zip_code ON member.zip = zip_code.zip_code\nWHERE zip_code.state = 'Illinois';",
+    "column_probe": {
+      "alias_map": {
+        "member": "member",
+        "zip_code": "zip_code"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1338,
+    "db_id": "student_club",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (COLUMN_SELECT, VALUE_FORMAT)",
+    "pred_sql": "SELECT expense_id, expense_description, approved\nFROM expense\nWHERE link_to_budget IN (\n    SELECT budget_id\n    FROM budget\n    WHERE link_to_event = (\n        SELECT event_id\n        FROM event\n        WHERE event_name = 'October Meeting' AND event_date = '2019-10-08'\n    )\n);",
+    "column_probe": {
+      "alias_map": {
+        "expense": "expense",
+        "budget": "budget",
+        "event": "event"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1350,
+    "db_id": "student_club",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT e.status \nFROM event e\nJOIN budget b ON e.event_id = b.link_to_event\nJOIN expense ex ON b.budget_id = ex.link_to_budget\nWHERE ex.expense_description = 'Post Cards, Posters' \nAND ex.expense_date = '2019-8-20';",
+    "column_probe": {
+      "alias_map": {
+        "e": "event",
+        "b": "budget",
+        "ex": "expense"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1351,
+    "db_id": "student_club",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT m.link_to_major, maj.major_name \nFROM member m \nJOIN major maj ON m.link_to_major = maj.major_id \nWHERE m.first_name = 'Brent' AND m.last_name = 'Thomason';",
+    "column_probe": {
+      "alias_map": {
+        "m": "member",
+        "maj": "major"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1359,
+    "db_id": "student_club",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (CASE_LOGIC, AGG_LOGIC)",
+    "pred_sql": "SELECT COUNT(*) \nFROM budget b1 \nJOIN event e1 ON b1.link_to_event = e1.event_id \nJOIN budget b2 ON b1.category = b2.category \nJOIN event e2 ON b2.link_to_event = e2.event_id \nWHERE e1.event_name = 'Yearly Kickoff' \nAND e2.event_name = 'October Meeting' \nAND b1.amount > b2.amount;",
+    "column_probe": {
+      "alias_map": {
+        "b1": "budget",
+        "e1": "event",
+        "b2": "budget",
+        "e2": "event"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1371,
+    "db_id": "student_club",
+    "difficulty": "simple",
+    "error_type": "Syntax Error",
+    "manual_label": null,
+    "pred_sql": "SELECT COUNT(*) AS member_count\nFROM attendance\nWHERE link_to_event = (SELECT event_id FROM event WHERE event_name = 'Women's Soccer');",
+    "column_probe": {
+      "parse_error": "Error tokenizing 'd FROM event WHERE event_name = 'Women's Soccer')'",
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1375,
+    "db_id": "student_club",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT first_name || ' ' || last_name AS full_name\nFROM member\nJOIN major ON member.link_to_major = major.major_id\nWHERE major.department = 'School of Applied Sciences, Technology and Education';",
+    "column_probe": {
+      "alias_map": {
+        "member": "member",
+        "major": "major"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1376,
+    "db_id": "student_club",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT event.event_name, MAX(budget.spent / budget.amount) AS spend_to_budget_ratio\nFROM event\nJOIN budget ON event.event_id = budget.link_to_event\nWHERE event.status = 'Closed'\nGROUP BY event.event_id\nORDER BY spend_to_budget_ratio DESC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "event": "event",
+        "budget": "budget"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1381,
+    "db_id": "student_club",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT first_name || ' ' || last_name AS full_name\nFROM member\nJOIN attendance ON member.member_id = attendance.link_to_member\nGROUP BY member.member_id\nHAVING COUNT(attendance.link_to_event) > 7;",
+    "column_probe": {
+      "alias_map": {
+        "member": "member",
+        "attendance": "attendance"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1387,
+    "db_id": "student_club",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (JOIN_PATH, COLUMN_SELECT)",
+    "pred_sql": "SELECT m.first_name || ' ' || m.last_name AS full_name\nFROM member m\nJOIN attendance a ON m.member_id = a.link_to_member\nJOIN event e ON a.link_to_event = e.event_id\nJOIN budget b ON e.event_id = b.link_to_event\nWHERE e.event_name = 'Yearly Kickoff';",
+    "column_probe": {
+      "alias_map": {
+        "m": "member",
+        "a": "attendance",
+        "e": "event",
+        "b": "budget"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1389,
+    "db_id": "student_club",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT e.event_name, MIN(ex.cost) AS lowest_cost\nFROM event e\nJOIN budget b ON e.event_id = b.link_to_event\nJOIN expense ex ON b.budget_id = ex.link_to_budget\nGROUP BY e.event_id\nORDER BY lowest_cost\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "e": "event",
+        "b": "budget",
+        "ex": "expense"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1392,
+    "db_id": "student_club",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (LOGIC_STRUCT, COLUMN_SELECT)",
+    "pred_sql": "SELECT source, SUM(amount) AS total_amount\nFROM income\nWHERE date_received BETWEEN '2019-09-01' AND '2019-09-30'\nGROUP BY source\nORDER BY total_amount DESC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "income": "income"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1399,
+    "db_id": "student_club",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT COUNT(*) > 0 AS attended\nFROM attendance a\nJOIN member m ON a.link_to_member = m.member_id\nJOIN event e ON a.link_to_event = e.event_id\nWHERE m.first_name = 'Maya' AND m.last_name = 'Mclean' AND e.event_name = 'Women''s Soccer';",
+    "column_probe": {
+      "alias_map": {
+        "a": "attendance",
+        "m": "member",
+        "e": "event"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1404,
+    "db_id": "student_club",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (COLUMN_SELECT, LOGIC_STRUCT)",
+    "pred_sql": "SELECT expense_description, SUM(cost) AS total_value\nFROM expense\nJOIN budget ON expense.link_to_budget = budget.budget_id\nJOIN event ON budget.link_to_event = event.event_id\nWHERE event.event_name = 'October Meeting' AND expense.approved = 'yes'\nGROUP BY expense_description;",
+    "column_probe": {
+      "alias_map": {
+        "expense": "expense",
+        "budget": "budget",
+        "event": "event"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1410,
+    "db_id": "student_club",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT m.first_name || ' ' || m.last_name AS full_name, SUM(e.cost) AS total_cost\nFROM member m\nJOIN expense e ON m.member_id = e.link_to_member\nWHERE m.member_id = 'rec4BLdZHS2Blfp4v'\nGROUP BY m.member_id;",
+    "column_probe": {
+      "alias_map": {
+        "m": "member",
+        "e": "expense"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1422,
+    "db_id": "student_club",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (JOIN_PATH, COLUMN_SELECT)",
+    "pred_sql": "SELECT DISTINCT type FROM event WHERE location = 'MU 215';",
+    "column_probe": {
+      "alias_map": {
+        "event": "event"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1427,
+    "db_id": "student_club",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (COLUMN_SELECT, LOGIC_STRUCT)",
+    "pred_sql": "SELECT b.category\nFROM budget b\nJOIN event e ON b.link_to_event = e.event_id\nWHERE e.location = 'MU 215' AND e.type = 'Guest Speaker' AND b.spent = 0;",
+    "column_probe": {
+      "alias_map": {
+        "b": "budget",
+        "e": "event"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1457,
+    "db_id": "student_club",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (COLUMN_SELECT, LOGIC_STRUCT)",
+    "pred_sql": "SELECT m.first_name || ' ' || m.last_name AS full_name, m.phone\nFROM member m\nJOIN expense e ON m.member_id = e.link_to_member\nWHERE e.cost > (SELECT AVG(cost) FROM expense)",
+    "column_probe": {
+      "alias_map": {
+        "m": "member",
+        "e": "expense",
+        "expense": "expense"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1460,
+    "db_id": "student_club",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (COLUMN_SELECT, LOGIC_STRUCT)",
+    "pred_sql": "SELECT m.first_name || ' ' || m.last_name AS full_name, e.cost\nFROM expense e\nJOIN member m ON e.link_to_member = m.member_id\nWHERE e.expense_description = 'Water, Veggie tray, supplies';",
+    "column_probe": {
+      "alias_map": {
+        "e": "expense",
+        "m": "member"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1464,
+    "db_id": "student_club",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (COLUMN_SELECT, JOIN_PATH, LOGIC_STRUCT)",
+    "pred_sql": "SELECT m.first_name || ' ' || m.last_name AS full_name, i.amount\nFROM income i\nJOIN member m ON i.link_to_member = m.member_id\nWHERE i.date_received = '2019-09-09';",
+    "column_probe": {
+      "alias_map": {
+        "i": "income",
+        "m": "member"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1149,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (LOGIC_STRUCT, COLUMN_SELECT)",
+    "pred_sql": "WITH MaleCounts AS (\n    SELECT \n        SUM(CASE WHEN Admission = '+' THEN 1 ELSE 0 END) AS InPatientCount,\n        SUM(CASE WHEN Admission = '-' THEN 1 ELSE 0 END) AS OutPatientCount\n    FROM Patient\n    WHERE SEX = 'M'\n)\nSELECT \n    InPatientCount,\n    OutPatientCount,\n    CASE \n        WHEN OutPatientCount = 0 THEN NULL\n        ELSE (InPatientCount - OutPatientCount) * 100.0 / OutPatientCount \n    END AS PercentageDeviation\nFROM MaleCounts;",
+    "column_probe": {
+      "alias_map": {
+        "malecounts": "__cte__malecounts",
+        "patient": "patient"
+      },
+      "cte_names": [
+        "malecounts"
+      ],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1157,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT p.ID, p.SEX, e.Diagnosis\nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nWHERE e.Thrombosis = 2;",
+    "column_probe": {
+      "alias_map": {
+        "p": "patient",
+        "e": "examination"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1166,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT e.Symptoms, e.Diagnosis\nFROM Examination e\nJOIN Patient p ON e.ID = p.ID\nWHERE p.Birthday = (SELECT MAX(Birthday) FROM Patient)\nAND e.Symptoms IS NOT NULL;",
+    "column_probe": {
+      "alias_map": {
+        "e": "examination",
+        "p": "patient",
+        "patient": "patient"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1168,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (JOIN_PATH, DOMAIN, LOGIC_STRUCT, COLUMN_SELECT)",
+    "pred_sql": "SELECT \n    MIN(e.`Examination Date`) AS Oldest_Examination_Date,\n    (strftime('%Y', p.`First Date`) - strftime('%Y', p.Birthday)) AS Age_At_Admission\nFROM \n    Examination e\nJOIN \n    Patient p ON e.ID = p.ID\nWHERE \n    p.Diagnosis = 'SJS';",
+    "column_probe": {
+      "alias_map": {
+        "e": "examination",
+        "p": "patient"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1169,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (LOGIC_STRUCT, COLUMN_SELECT)",
+    "pred_sql": "SELECT \n    (SELECT COUNT(*) FROM Patient p \n     JOIN Laboratory l ON p.ID = l.ID \n     WHERE p.SEX = 'M' AND l.UA <= 8.0) AS Male_Count,\n    (SELECT COUNT(*) FROM Patient p \n     JOIN Laboratory l ON p.ID = l.ID \n     WHERE p.SEX = 'F' AND l.UA <= 6.5) AS Female_Count,\n    (SELECT COUNT(*) FROM Patient p \n     JOIN Laboratory l ON p.ID = l.ID \n     WHERE p.SEX = 'M' AND l.UA <= 8.0) * 1.0 / \n    (SELECT COUNT(*) FROM Patient p \n     JOIN Laboratory l ON p.ID = l.ID \n     WHERE p.SEX = 'F' AND l.UA <= 6.5) AS Male_to_Female_Ratio",
+    "column_probe": {
+      "alias_map": {
+        "p": "patient",
+        "l": "laboratory"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1175,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "moderate",
+    "error_type": "Syntax Error",
+    "manual_label": "COMPLEX (JOIN_PATH, LOGIC_STRUCT)",
+    "pred_sql": "SELECT \n    (strftime('%Y', `Examination Date`) - strftime('%Y', Birthday)) AS Age,\n    Diagnosis\nFROM \n    Examination\nJOIN \n    Patient ON Examination.ID = Patient.ID\nWHERE \n    HGB = (SELECT MAX(HGB) FROM Laboratory)\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "examination": "examination",
+        "patient": "patient",
+        "laboratory": "laboratory"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1179,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT `aCL IgM`\nFROM Examination\nWHERE ID = (SELECT ID FROM Patient WHERE Diagnosis = 'SLE' AND Description = '1994-02-19')\nAND `Examination Date` = '1993-11-12';",
+    "column_probe": {
+      "alias_map": {
+        "examination": "examination",
+        "patient": "patient"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1187,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (JOIN_PATH, LOGIC_STRUCT)",
+    "pred_sql": "SELECT DISTINCT p.ID\nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nJOIN Laboratory l ON p.ID = l.ID\nWHERE e.`Examination Date` BETWEEN '1987-07-06' AND '1996-01-31'\n  AND l.GPT > 30\n  AND l.ALB < 4;",
+    "column_probe": {
+      "alias_map": {
+        "p": "patient",
+        "e": "examination",
+        "l": "laboratory"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1189,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT COUNT(*) \nFROM Examination \nWHERE Thrombosis = 2 \nAND ANA = 'S' \nAND `aCL IgM` > (SELECT AVG(`aCL IgM`) * 1.2 FROM Examination);",
+    "column_probe": {
+      "alias_map": {
+        "examination": "examination"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1192,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (COLUMN_SELECT, LOGIC_STRUCT, VALUE_FORMAT)",
+    "pred_sql": "SELECT DISTINCT p.ID, p.SEX, p.Birthday, p.Description, p.`First Date`, p.Admission, p.Diagnosis\nFROM Patient p\nJOIN Laboratory l ON p.ID = l.ID\nWHERE p.Admission = '-' \n  AND l.Date LIKE '1991-10%' \n  AND l.`T-BIL` < 2.0;",
+    "column_probe": {
+      "alias_map": {
+        "p": "patient",
+        "l": "laboratory"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1195,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (JOIN_PATH, COLUMN_SELECT, VALUE_FORMAT)",
+    "pred_sql": "SELECT AVG(LAB.ALB) AS Average_Albumin_Level\nFROM Laboratory LAB\nJOIN Patient PAT ON LAB.ID = PAT.ID\nJOIN Examination EXAM ON PAT.ID = EXAM.ID\nWHERE PAT.SEX = 'F' AND LAB.PLT > 400 AND EXAM.Diagnosis = 'SLE';",
+    "column_probe": {
+      "alias_map": {
+        "lab": "laboratory",
+        "pat": "patient",
+        "exam": "examination"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1198,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (JOIN_PATH, LOGIC_STRUCT)",
+    "pred_sql": "SELECT COUNT(*) \nFROM Patient \nWHERE SEX = 'F' AND ID IN (SELECT ID FROM Examination WHERE Diagnosis = 'APS');",
+    "column_probe": {
+      "alias_map": {
+        "patient": "patient",
+        "examination": "examination"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1205,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (LOGIC_STRUCT, VALUE_FORMAT)",
+    "pred_sql": "SELECT \n    CASE \n        WHEN (p.SEX = 'M' AND l.UA <= 8.0) THEN 'Not within normal range'\n        WHEN (p.SEX = 'F' AND l.UA <= 6.5) THEN 'Not within normal range'\n        ELSE 'Within normal range'\n    END AS Uric_Acid_Status\nFROM \n    Patient p\nJOIN \n    Laboratory l ON p.ID = l.ID\nWHERE \n    p.ID = 57266;",
+    "column_probe": {
+      "alias_map": {
+        "p": "patient",
+        "l": "laboratory"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1225,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (LOGIC_STRUCT, COLUMN_SELECT, DOMAIN)",
+    "pred_sql": "SELECT P.SEX, GROUP_CONCAT(DISTINCT P.ID) AS PatientIDs\nFROM Patient P\nJOIN Laboratory L ON P.ID = L.ID\nWHERE L.`T-BIL` >= 2.0\nGROUP BY P.SEX;",
+    "column_probe": {
+      "alias_map": {
+        "p": "patient",
+        "l": "laboratory"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1235,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (JOIN_PATH, LOGIC_STRUCT)",
+    "pred_sql": "SELECT p.ID, \n       (strftime('%Y', 'now') - strftime('%Y', p.Birthday)) AS Age, \n       e.Diagnosis \nFROM Patient p \nJOIN Laboratory l ON p.ID = l.ID \nJOIN Examination e ON p.ID = e.ID \nWHERE l.RBC < 3.5;",
+    "column_probe": {
+      "alias_map": {
+        "p": "patient",
+        "l": "laboratory",
+        "e": "examination"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1238,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "JOIN_PATH",
+    "pred_sql": "SELECT P.ID, P.SEX\nFROM Patient P\nJOIN Examination E ON P.ID = E.ID\nJOIN Laboratory L ON P.ID = L.ID\nWHERE P.Diagnosis = 'SLE' \nAND L.HGB > 10 AND L.HGB < 17\nORDER BY P.Birthday ASC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "p": "patient",
+        "e": "examination",
+        "l": "laboratory"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1241,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT \n    SUM(CASE WHEN L.PLT < 100 THEN 1 ELSE 0 END) AS Lower_Than_Normal,\n    SUM(CASE WHEN L.PLT > 400 THEN 1 ELSE 0 END) AS Higher_Than_Normal\nFROM \n    Laboratory L\nWHERE \n    L.PLT <= 100 OR L.PLT >= 400;",
+    "column_probe": {
+      "alias_map": {
+        "l": "laboratory"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1242,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (COLUMN_SELECT, LOGIC_STRUCT)",
+    "pred_sql": "SELECT p.ID, p.SEX, p.Birthday\nFROM Patient p\nJOIN Laboratory l ON p.ID = l.ID\nWHERE strftime('%Y', l.Date) = '1984'\nAND (strftime('%Y', 'now') - strftime('%Y', p.Birthday)) < 50\nAND l.PLT BETWEEN 100 AND 400;",
+    "column_probe": {
+      "alias_map": {
+        "p": "patient",
+        "l": "laboratory"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1243,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "AGG_LOGIC",
+    "pred_sql": "SELECT \n    (SUM(CASE WHEN p.SEX = 'F' AND l.PT >= 14 THEN 1 ELSE 0 END) * 100.0) / \n    NULLIF(SUM(CASE WHEN l.PT >= 14 THEN 1 ELSE 0 END), 0) AS female_abnormal_PT_percentage\nFROM \n    Patient p\nJOIN \n    Laboratory l ON p.ID = l.ID\nWHERE \n    (strftime('%Y', 'now') - strftime('%Y', p.Birthday)) > 55;",
+    "column_probe": {
+      "alias_map": {
+        "p": "patient",
+        "l": "laboratory"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1247,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (VALUE_FORMAT, LOGIC_STRUCT)",
+    "pred_sql": "SELECT COUNT(DISTINCT p.ID) AS AbnormalFibrinogenCount\nFROM Patient p\nJOIN Laboratory l ON p.ID = l.ID\nWHERE p.SEX = 'M'\n  AND l.WBC > 3.5 AND l.WBC < 9.0\n  AND (l.FG <= 150 OR l.FG >= 450);",
+    "column_probe": {
+      "alias_map": {
+        "p": "patient",
+        "l": "laboratory"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1251,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "simple",
+    "error_type": "Syntax Error",
+    "manual_label": "COMPLEX (JOIN_PATH, VALUE_FORMAT)",
+    "pred_sql": "SELECT COUNT(DISTINCT p.ID) AS PatientCount\nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nWHERE e.IGG >= 2000;",
+    "column_probe": {
+      "alias_map": {
+        "p": "patient",
+        "e": "examination"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [
+        {
+          "qualifier": "e",
+          "resolved_table": "Examination",
+          "column": "igg",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [
+            "Laboratory"
+          ],
+          "exec_probe": true,
+          "exec_message": "ok"
+        }
+      ],
+      "unresolved_refs": [],
+      "has_invalid_ref": true,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1252,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "moderate",
+    "error_type": "Syntax Error",
+    "manual_label": null,
+    "pred_sql": "SELECT COUNT(*) \nFROM Examination \nWHERE IGG > 900 AND IGG < 2000 AND Symptoms IS NOT NULL;",
+    "column_probe": {
+      "alias_map": {
+        "examination": "examination"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1254,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "moderate",
+    "error_type": "Syntax Error",
+    "manual_label": "COMPLEX (JOIN_PATH, COLUMN_SELECT)",
+    "pred_sql": "SELECT COUNT(*) \nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nWHERE e.IGA > 80 AND e.IGA < 500 \nAND p.`First Date` >= '1990-01-01';",
+    "column_probe": {
+      "alias_map": {
+        "p": "patient",
+        "e": "examination"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [
+        {
+          "qualifier": "e",
+          "resolved_table": "Examination",
+          "column": "iga",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [
+            "Laboratory"
+          ],
+          "exec_probe": true,
+          "exec_message": "ok"
+        }
+      ],
+      "unresolved_refs": [],
+      "has_invalid_ref": true,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1255,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "moderate",
+    "error_type": "Syntax Error",
+    "manual_label": "COMPLEX (JOIN_PATH, COLUMN_SELECT)",
+    "pred_sql": "SELECT Diagnosis\nFROM Examination\nWHERE aCL IgM <= 40 OR aCL IgM >= 400\nGROUP BY Diagnosis\nORDER BY COUNT(Diagnosis) DESC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "examination": "examination"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1256,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (VALUE_FORMAT, LOGIC_STRUCT)",
+    "pred_sql": "SELECT COUNT(DISTINCT p.ID) AS Abnormal_CRP_No_Data\nFROM Patient p\nJOIN Laboratory l ON p.ID = l.ID\nWHERE l.CRP = '+' AND p.Description IS NULL;",
+    "column_probe": {
+      "alias_map": {
+        "p": "patient",
+        "l": "laboratory"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1257,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT COUNT(*) \nFROM Patient p\nJOIN Laboratory l ON p.ID = l.ID\nWHERE l.CRE >= 1.5 AND (strftime('%Y', 'now') - strftime('%Y', p.Birthday)) < 70;",
+    "column_probe": {
+      "alias_map": {
+        "p": "patient",
+        "l": "laboratory"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1265,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "VALUE_FORMAT",
+    "pred_sql": "SELECT COUNT(DISTINCT p.ID) AS Normal_RNP_Patients\nFROM Patient p\nJOIN Laboratory l ON p.ID = l.ID\nWHERE l.RNP IN ('-', '+-') AND p.Admission = '+';",
+    "column_probe": {
+      "alias_map": {
+        "p": "patient",
+        "l": "laboratory"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1267,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "moderate",
+    "error_type": "Syntax Error",
+    "manual_label": "VALUE_FORMAT",
+    "pred_sql": "SELECT COUNT(*) \nFROM Examination \nWHERE SM IN ('-', '0') AND Thrombosis = 0;",
+    "column_probe": {
+      "alias_map": {
+        "examination": "examination"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1270,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "challenging",
+    "error_type": "Syntax Error",
+    "manual_label": null,
+    "pred_sql": "SELECT COUNT(DISTINCT p.ID) AS FemalePatientsWithoutSymptoms\nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nWHERE p.SEX = 'F' \n  AND e.SC170 IN ('negative', '0') \n  AND e.Symptoms IS NULL;",
+    "column_probe": {
+      "alias_map": {
+        "p": "patient",
+        "e": "examination"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [
+        {
+          "qualifier": "e",
+          "resolved_table": "Examination",
+          "column": "sc170",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [
+            "Laboratory"
+          ],
+          "exec_probe": true,
+          "exec_message": "ok"
+        }
+      ],
+      "unresolved_refs": [],
+      "has_invalid_ref": true,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1275,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "VALUE_FORMAT",
+    "pred_sql": "SELECT COUNT(DISTINCT p.ID) AS MalePatients\nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nJOIN Laboratory l ON p.ID = l.ID\nWHERE l.CENTROMEA IN ('-', '+-')\n  AND l.SSB IN ('-', '+-')\n  AND p.SEX = 'M';",
+    "column_probe": {
+      "alias_map": {
+        "p": "patient",
+        "e": "examination",
+        "l": "laboratory"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1281,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT MIN(Birthday) AS Youngest_Birthday\nFROM Patient\nWHERE ID IN (\n    SELECT ID\n    FROM Laboratory\n    WHERE GOT >= 60\n);",
+    "column_probe": {
+      "alias_map": {
+        "patient": "patient",
+        "laboratory": "laboratory"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1302,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "challenging",
+    "error_type": "Syntax Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT COUNT(DISTINCT p.ID) AS PositiveCoagulationCount\nFROM Patient p\nJOIN Laboratory l ON p.ID = l.ID\nWHERE l.CPK < 250 \nAND (l.KCT = '+' OR l.RVVT = '+' OR l.LAC = '+');",
+    "column_probe": {
+      "alias_map": {
+        "p": "patient",
+        "l": "laboratory"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [
+        {
+          "qualifier": "l",
+          "resolved_table": "Laboratory",
+          "column": "lac",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [
+            "Examination"
+          ],
+          "exec_probe": true,
+          "exec_message": "ok"
+        },
+        {
+          "qualifier": "l",
+          "resolved_table": "Laboratory",
+          "column": "kct",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [
+            "Examination"
+          ],
+          "exec_probe": true,
+          "exec_message": "ok"
+        },
+        {
+          "qualifier": "l",
+          "resolved_table": "Laboratory",
+          "column": "rvvt",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [
+            "Examination"
+          ],
+          "exec_probe": true,
+          "exec_message": "ok"
+        }
+      ],
+      "unresolved_refs": [],
+      "has_invalid_ref": true,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1028,
+    "db_id": "european_football_2",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT t.team_long_name\nFROM Match m\nJOIN Team t ON m.away_team_api_id = t.team_api_id\nJOIN League l ON m.league_id = l.id\nWHERE l.name = 'Scotland Premier League' AND m.season = '2009/2010' AND m.away_team_goal > m.home_team_goal\nGROUP BY t.team_long_name\nORDER BY COUNT(*) DESC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "m": "match",
+        "t": "team",
+        "l": "league"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1029,
+    "db_id": "european_football_2",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (JOIN_PATH, COLUMN_SELECT, LOGIC_STRUCT)",
+    "pred_sql": "SELECT team.team_long_name, ta.buildUpPlaySpeed\nFROM Team_Attributes ta\nJOIN Team team ON ta.team_fifa_api_id = team.team_fifa_api_id\nORDER BY ta.buildUpPlaySpeed DESC\nLIMIT 4;",
+    "column_probe": {
+      "alias_map": {
+        "ta": "team_attributes",
+        "team": "team"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1031,
+    "db_id": "european_football_2",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT \n    player_name, \n    (strftime('%Y', 'now') - strftime('%Y', birthday)) AS age\nFROM \n    Player \nJOIN \n    Player_Attributes ON Player.player_api_id = Player_Attributes.player_api_id\nWHERE \n    sprint_speed >= 97 \n    AND date BETWEEN '2013-01-01' AND '2015-12-31';",
+    "column_probe": {
+      "alias_map": {
+        "player": "player",
+        "player_attributes": "player_attributes"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1032,
+    "db_id": "european_football_2",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT L.name, COUNT(M.id) AS total_matches\nFROM Match M\nJOIN League L ON M.league_id = L.id\nGROUP BY L.id\nORDER BY total_matches DESC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "m": "match",
+        "l": "league"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1037,
+    "db_id": "european_football_2",
+    "difficulty": "challenging",
+    "error_type": "Syntax Error",
+    "manual_label": "JOIN_PATH",
+    "pred_sql": "SELECT \n    (SUM(CASE WHEN p.preferred_foot = 'left' THEN 1 ELSE 0 END) * 100.0) / COUNT(p.player_fifa_api_id) AS percentage_left_foot\nFROM \n    Player p\nWHERE \n    strftime('%Y', p.birthday) BETWEEN '1987' AND '1992';",
+    "column_probe": {
+      "alias_map": {
+        "p": "player"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [
+        {
+          "qualifier": "p",
+          "resolved_table": "Player",
+          "column": "preferred_foot",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [
+            "Player_Attributes"
+          ],
+          "exec_probe": true,
+          "exec_message": "ok"
+        }
+      ],
+      "unresolved_refs": [],
+      "has_invalid_ref": true,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1040,
+    "db_id": "european_football_2",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT p.player_name\nFROM Player p\nJOIN Player_Attributes pa ON p.player_api_id = pa.player_api_id\nWHERE p.height > 180\nGROUP BY p.player_name\nORDER BY AVG(pa.heading_accuracy) DESC\nLIMIT 10;",
+    "column_probe": {
+      "alias_map": {
+        "p": "player",
+        "pa": "player_attributes"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1042,
+    "db_id": "european_football_2",
+    "difficulty": "challenging",
+    "error_type": "Syntax Error",
+    "manual_label": null,
+    "pred_sql": "SELECT L.name\nFROM Match M\nJOIN League L ON M.league_id = L.id\nWHERE M.season = '2009/2010'\nGROUP BY L.id\nHAVING AVG(M.home_team_goal) > AVG(M.away_team_goal;",
+    "column_probe": {
+      "alias_map": {
+        "m": "match",
+        "l": "league"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1058,
+    "db_id": "european_football_2",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT player_name, AVG(finishing) AS average_finishing\nFROM Player\nJOIN Player_Attributes ON Player.player_api_id = Player_Attributes.player_api_id\nWHERE height BETWEEN (SELECT MIN(height) FROM Player) AND (SELECT MAX(height) FROM Player)\nGROUP BY player_name\nORDER BY average_finishing DESC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "player": "player",
+        "player_attributes": "player_attributes"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1068,
+    "db_id": "european_football_2",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "AGG_LOGIC",
+    "pred_sql": "SELECT AVG(pa.overall_rating) AS average_rating\nFROM Player_Attributes pa\nJOIN Player p ON pa.player_api_id = p.player_api_id\nWHERE strftime('%Y', pa.date) BETWEEN '2010' AND '2015'\nAND p.height > 170;",
+    "column_probe": {
+      "alias_map": {
+        "pa": "player_attributes",
+        "p": "player"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1078,
+    "db_id": "european_football_2",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (COLUMN_SELECT, LOGIC_STRUCT)",
+    "pred_sql": "SELECT player_name, birthday \nFROM Player \nWHERE player_name IN ('Aaron Lennon', 'Abdelaziz Barrada')\nORDER BY birthday ASC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "player": "player"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1079,
+    "db_id": "european_football_2",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT player_name, height \nFROM Player \nORDER BY height DESC \nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "player": "player"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1092,
+    "db_id": "european_football_2",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT L.name\nFROM League L\nJOIN Match M ON L.id = M.league_id\nWHERE M.season = '2008/2009'\nGROUP BY L.id\nORDER BY COUNT(M.id) DESC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "l": "league",
+        "m": "match"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1094,
+    "db_id": "european_football_2",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (CASE_LOGIC, COLUMN_SELECT)",
+    "pred_sql": "SELECT \n    (SELECT overall_rating FROM Player_Attributes WHERE player_api_id = (SELECT player_api_id FROM Player WHERE player_name = 'Ariel Borysiuk')) -\n    (SELECT overall_rating FROM Player_Attributes WHERE player_api_id = (SELECT player_api_id FROM Player WHERE player_name = 'Paulin Puel')) AS rating_difference,\n    ((SELECT overall_rating FROM Player_Attributes WHERE player_api_id = (SELECT player_api_id FROM Player WHERE player_name = 'Ariel Borysiuk')) - \n    (SELECT overall_rating FROM Player_Attributes WHERE player_api_id = (SELECT player_api_id FROM Player WHERE player_name = 'Paulin Puel'))) * 100.0 /\n    (SELECT overall_rating FROM Player_Attributes WHERE player_api_id = (SELECT player_api_id FROM Player WHERE player_name = 'Paulin Puel')) AS percentage_difference",
+    "column_probe": {
+      "alias_map": {
+        "player_attributes": "player_attributes",
+        "player": "player"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1107,
+    "db_id": "european_football_2",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT date \nFROM Player_Attributes \nWHERE player_fifa_api_id = (SELECT player_fifa_api_id FROM Player WHERE player_name = 'Kevin Constant') \nAND crossing = (SELECT MAX(crossing) FROM Player_Attributes WHERE player_fifa_api_id = (SELECT player_fifa_api_id FROM Player WHERE player_name = 'Kevin Constant')) \nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "player_attributes": "player_attributes",
+        "player": "player"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1114,
+    "db_id": "european_football_2",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "AGG_LOGIC",
+    "pred_sql": "SELECT AVG(overall_rating) AS average_rating\nFROM Player_Attributes\nJOIN Player ON Player_Attributes.player_api_id = Player.player_api_id\nWHERE Player.player_name = 'Marko Arnautovic'\nAND date BETWEEN '2007-02-22' AND '2016-04-21';",
+    "column_probe": {
+      "alias_map": {
+        "player_attributes": "player_attributes",
+        "player": "player"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1115,
+    "db_id": "european_football_2",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "CASE_LOGIC",
+    "pred_sql": "SELECT \n    ((ld.overall_rating - jb.overall_rating) * 100.0 / jb.overall_rating) AS percentage_difference\nFROM \n    Player_Attributes ld\nJOIN \n    Player_Attributes jb ON ld.date = jb.date\nJOIN \n    Player p1 ON ld.player_api_id = p1.player_api_id\nJOIN \n    Player p2 ON jb.player_api_id = p2.player_api_id\nWHERE \n    p1.player_name = 'Landon Donovan' \n    AND p2.player_name = 'Jordan Bowery' \n    AND ld.date = '2013-07-12';",
+    "column_probe": {
+      "alias_map": {
+        "ld": "player_attributes",
+        "jb": "player_attributes",
+        "p1": "player",
+        "p2": "player"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1133,
+    "db_id": "european_football_2",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT COUNT(*) \nFROM Player \nWHERE player_name LIKE 'Aaron%' AND birthday > '1999-12-31';",
+    "column_probe": {
+      "alias_map": {
+        "player": "player"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1134,
+    "db_id": "european_football_2",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "CASE_LOGIC",
+    "pred_sql": "SELECT (SELECT jumping FROM Player_Attributes WHERE player_api_id = 6) - (SELECT jumping FROM Player_Attributes WHERE player_api_id = 23) AS score_difference;",
+    "column_probe": {
+      "alias_map": {
+        "player_attributes": "player_attributes"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1135,
+    "db_id": "european_football_2",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT player_fifa_api_id \nFROM Player_Attributes \nWHERE potential = (SELECT MIN(potential) FROM Player_Attributes) \nAND preferred_foot = 'right' \nLIMIT 4;",
+    "column_probe": {
+      "alias_map": {
+        "player_attributes": "player_attributes"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1144,
+    "db_id": "european_football_2",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (COLUMN_SELECT, LOGIC_STRUCT)",
+    "pred_sql": "SELECT pa.finishing, pa.curve\nFROM Player p\nJOIN Player_Attributes pa ON p.player_api_id = pa.player_api_id\nWHERE p.weight = (SELECT MAX(weight) FROM Player);",
+    "column_probe": {
+      "alias_map": {
+        "p": "player",
+        "pa": "player_attributes",
+        "player": "player"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1145,
+    "db_id": "european_football_2",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT L.name, COUNT(M.id) AS game_count\nFROM Match M\nJOIN League L ON M.league_id = L.id\nWHERE M.season = '2015/2016'\nGROUP BY L.name\nORDER BY game_count DESC\nLIMIT 4;",
+    "column_probe": {
+      "alias_map": {
+        "m": "match",
+        "l": "league"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 861,
+    "db_id": "formula_1",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "VALUE_FORMAT",
+    "pred_sql": "SELECT d.number\nFROM qualifying q\nJOIN drivers d ON q.driverId = d.driverId\nWHERE q.raceId = 903 AND q.q3 = '0:01:54';",
+    "column_probe": {
+      "alias_map": {
+        "q": "qualifying",
+        "d": "drivers"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 862,
+    "db_id": "formula_1",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (COLUMN_SELECT, VALUE_FORMAT)",
+    "pred_sql": "SELECT COUNT(*) AS drivers_not_finished\nFROM results\nJOIN races ON results.raceId = races.raceId\nWHERE races.name = 'Bahrain Grand Prix' AND results.time IS NULL;",
+    "column_probe": {
+      "alias_map": {
+        "results": "results",
+        "races": "races"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 865,
+    "db_id": "formula_1",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT d.forename, d.surname, d.dob\nFROM drivers d\nJOIN results r ON d.driverId = r.driverId\nWHERE r.raceId = 592 AND r.time IS NOT NULL\nORDER BY d.dob ASC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "d": "drivers",
+        "r": "results"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 866,
+    "db_id": "formula_1",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (VALUE_FORMAT, COLUMN_SELECT)",
+    "pred_sql": "SELECT d.url\nFROM lapTimes lt\nJOIN drivers d ON lt.driverId = d.driverId\nWHERE lt.raceId = 161 AND lt.time = '0:01:27';",
+    "column_probe": {
+      "alias_map": {
+        "lt": "laptimes",
+        "d": "drivers"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 872,
+    "db_id": "formula_1",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "VALUE_FORMAT",
+    "pred_sql": "SELECT d.code \nFROM drivers d\nJOIN qualifying q ON d.driverId = q.driverId\nWHERE q.raceId = 45 AND q.q3 LIKE '0:01:33%';",
+    "column_probe": {
+      "alias_map": {
+        "d": "drivers",
+        "q": "qualifying"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 877,
+    "db_id": "formula_1",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (COLUMN_SELECT, LOGIC_STRUCT)",
+    "pred_sql": "SELECT d.forename, d.surname, d.dob\nFROM drivers d\nJOIN results r ON d.driverId = r.driverId\nWHERE r.raceId = 872 AND r.time IS NOT NULL\nORDER BY d.dob DESC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "d": "drivers",
+        "r": "results"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 880,
+    "db_id": "formula_1",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "CASE_LOGIC",
+    "pred_sql": "SELECT \n    ((CAST((SELECT fastestLapSpeed FROM results WHERE raceId = 853 AND driverId = (SELECT driverId FROM drivers WHERE forename = 'Paul' AND surname = 'di Resta')) AS REAL) - \n    CAST((SELECT fastestLapSpeed FROM results WHERE raceId = 854 AND driverId = (SELECT driverId FROM drivers WHERE forename = 'Paul' AND surname = 'di Resta')) AS REAL)) / \n    CAST((SELECT fastestLapSpeed FROM results WHERE raceId = 854 AND driverId = (SELECT driverId FROM drivers WHERE forename = 'Paul' AND surname = 'di Resta')) AS REAL)) * 100 AS percent_faster",
+    "column_probe": {
+      "alias_map": {
+        "results": "results",
+        "drivers": "drivers"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 884,
+    "db_id": "formula_1",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT name \nFROM races \nWHERE date = (SELECT MIN(date) FROM races);",
+    "column_probe": {
+      "alias_map": {
+        "races": "races"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 892,
+    "db_id": "formula_1",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "AGG_LOGIC",
+    "pred_sql": "SELECT d.forename || ' ' || d.surname AS full_name, MAX(ds.points) AS max_points\nFROM driverStandings ds\nJOIN drivers d ON ds.driverId = d.driverId\nGROUP BY ds.driverId\nORDER BY max_points DESC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "ds": "driverstandings",
+        "d": "drivers"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 894,
+    "db_id": "formula_1",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT d.forename, d.surname, r.name\nFROM lapTimes lt\nJOIN drivers d ON lt.driverId = d.driverId\nJOIN races r ON lt.raceId = r.raceId\nWHERE lt.milliseconds = (SELECT MIN(milliseconds) FROM lapTimes);",
+    "column_probe": {
+      "alias_map": {
+        "lt": "laptimes",
+        "d": "drivers",
+        "r": "races",
+        "laptimes": "laptimes"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 895,
+    "db_id": "formula_1",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT AVG(lapTimes.milliseconds) AS average_lap_time\nFROM lapTimes\nJOIN races ON lapTimes.raceId = races.raceId\nJOIN drivers ON lapTimes.driverId = drivers.driverId\nWHERE drivers.forename = 'Lewis' AND drivers.surname = 'Hamilton' \nAND races.name = 'Malaysian Grand Prix';",
+    "column_probe": {
+      "alias_map": {
+        "laptimes": "laptimes",
+        "races": "races",
+        "drivers": "drivers"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 896,
+    "db_id": "formula_1",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "JOIN_PATH",
+    "pred_sql": "SELECT \n    (COUNT(CASE WHEN r.position > 1 THEN 1 END) * 100.0 / COUNT(*)) AS percentage_not_first\nFROM \n    results r\nJOIN \n    drivers d ON r.driverId = d.driverId\nJOIN \n    races ra ON r.raceId = ra.raceId\nWHERE \n    d.surname = 'Hamilton' AND ra.year >= 2010;",
+    "column_probe": {
+      "alias_map": {
+        "r": "results",
+        "d": "drivers",
+        "ra": "races"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 897,
+    "db_id": "formula_1",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT d.forename || ' ' || d.surname AS full_name, d.nationality, MAX(ds.points) AS max_points\nFROM drivers d\nJOIN driverStandings ds ON d.driverId = ds.driverId\nGROUP BY d.driverId\nORDER BY SUM(ds.wins) DESC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "d": "drivers",
+        "ds": "driverstandings"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 898,
+    "db_id": "formula_1",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (COLUMN_SELECT, LOGIC_STRUCT)",
+    "pred_sql": "SELECT forename || ' ' || surname AS name, dob \nFROM drivers \nWHERE nationality = 'Japanese' \nORDER BY dob DESC \nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "drivers": "drivers"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 902,
+    "db_id": "formula_1",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT r.name\nFROM races r\nJOIN results res ON r.raceId = res.raceId\nJOIN drivers d ON res.driverId = d.driverId\nWHERE d.forename = 'Alex' AND d.surname = 'Yoong' AND res.grid < 20;",
+    "column_probe": {
+      "alias_map": {
+        "r": "races",
+        "res": "results",
+        "d": "drivers"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 904,
+    "db_id": "formula_1",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "JOIN_PATH",
+    "pred_sql": "SELECT r.name AS race, r.year\nFROM races r\nJOIN results res ON r.raceId = res.raceId\nJOIN drivers d ON res.driverId = d.driverId\nWHERE d.forename = 'Michael' AND d.surname = 'Schumacher' AND res.fastestLap = 1",
+    "column_probe": {
+      "alias_map": {
+        "r": "races",
+        "res": "results",
+        "d": "drivers"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 906,
+    "db_id": "formula_1",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT r.name AS race_name, res.points\nFROM results res\nJOIN races r ON res.raceId = r.raceId\nJOIN drivers d ON res.driverId = d.driverId\nWHERE d.forename = 'Lewis' AND d.surname = 'Hamilton'\nAND r.year = (SELECT MIN(year) FROM races r2\n              JOIN results res2 ON r2.raceId = res2.raceId\n              JOIN drivers d2 ON res2.driverId = d2.driverId\n              WHERE d2.forename = 'Lewis' AND d2.surname = 'Hamilton');",
+    "column_probe": {
+      "alias_map": {
+        "res": "results",
+        "r": "races",
+        "d": "drivers",
+        "r2": "races",
+        "res2": "results",
+        "d2": "drivers"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 915,
+    "db_id": "formula_1",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT nationality \nFROM drivers \nORDER BY dob ASC \nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "drivers": "drivers"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 928,
+    "db_id": "formula_1",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT d.driverRef\nFROM results r\nJOIN races ra ON r.raceId = ra.raceId\nJOIN drivers d ON r.driverId = d.driverId\nWHERE ra.year = 2007 AND ra.name = 'Canadian Grand Prix' AND r.position = 1;",
+    "column_probe": {
+      "alias_map": {
+        "r": "results",
+        "ra": "races",
+        "d": "drivers"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 930,
+    "db_id": "formula_1",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT r.name, r.year, r.round\nFROM results res\nJOIN races r ON res.raceId = r.raceId\nJOIN drivers d ON res.driverId = d.driverId\nWHERE d.forename = 'Lewis' AND d.surname = 'Hamilton'\nORDER BY res.rank ASC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "res": "results",
+        "r": "races",
+        "d": "drivers"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 931,
+    "db_id": "formula_1",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT MAX(fastestLapSpeed) AS fastestLapSpeed\nFROM results\nJOIN races ON results.raceId = races.raceId\nWHERE races.name = 'Spanish Grand Prix';",
+    "column_probe": {
+      "alias_map": {
+        "results": "results",
+        "races": "races"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 933,
+    "db_id": "formula_1",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT r.positionOrder \nFROM results r \nJOIN races ra ON r.raceId = ra.raceId \nJOIN drivers d ON r.driverId = d.driverId \nWHERE d.forename = 'Lewis' AND d.surname = 'Hamilton' AND ra.name = 'Chinese Grand Prix';",
+    "column_probe": {
+      "alias_map": {
+        "r": "results",
+        "ra": "races",
+        "d": "drivers"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 937,
+    "db_id": "formula_1",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT r.time \nFROM results AS res\nJOIN races AS r ON res.raceId = r.raceId\nWHERE r.name = 'Chinese Grand Prix' \n  AND r.year = 2008 \n  AND res.position = 2;",
+    "column_probe": {
+      "alias_map": {
+        "res": "results",
+        "r": "races"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 944,
+    "db_id": "formula_1",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT \n    (CAST((last_driver.milliseconds - champion.milliseconds) AS REAL) / last_driver.milliseconds) * 100 AS percentage_faster\nFROM \n    (SELECT \n        r.time, \n        r.milliseconds \n     FROM \n        results r \n     JOIN \n        races ra ON r.raceId = ra.raceId \n     WHERE \n        ra.year = 2008 AND \n        ra.name = 'Australian Grand Prix' AND \n        r.position = 1 AND \n        r.time IS NOT NULL) AS champion,\n    (SELECT \n        r.time, \n        r.milliseconds \n     FROM \n        results r \n     JOIN \n        races ra ON r.raceId = ra.raceId \n     WHERE \n        ra.year = 2008 AND \n        ra.name = 'Australian Grand Prix' AND \n        r.position = (SELECT MAX(position) FROM results WHERE raceId = r.raceId) AND \n        r.time IS NOT NULL) AS last_driver;",
+    "column_probe": {
+      "alias_map": {
+        "r": "results",
+        "ra": "races",
+        "results": "results",
+        "last_driver": "__subquery__last_driver",
+        "champion": "__subquery__champion"
+      },
+      "cte_names": [],
+      "subquery_aliases": [
+        "last_driver",
+        "champion"
+      ],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 948,
+    "db_id": "formula_1",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "AGG_LOGIC",
+    "pred_sql": "SELECT MAX(points) AS max_points\nFROM constructors\nJOIN constructorResults ON constructors.constructorId = constructorResults.constructorId\nWHERE constructors.nationality = 'British';",
+    "column_probe": {
+      "alias_map": {
+        "constructors": "constructors",
+        "constructorresults": "constructorresults"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 950,
+    "db_id": "formula_1",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "JOIN_PATH",
+    "pred_sql": "SELECT c.name \nFROM constructors c\nJOIN constructorResults cr ON c.constructorId = cr.constructorId\nWHERE cr.raceId = 291 AND cr.points = 0;",
+    "column_probe": {
+      "alias_map": {
+        "c": "constructors",
+        "cr": "constructorresults"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 951,
+    "db_id": "formula_1",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (JOIN_PATH, LOGIC_STRUCT)",
+    "pred_sql": "SELECT COUNT(DISTINCT c.constructorId) AS JapaneseConstructorsWithZeroPoints\nFROM constructors c\nJOIN constructorResults cr ON c.constructorId = cr.constructorId\nWHERE c.nationality = 'Japanese' AND cr.points = 0\nGROUP BY c.constructorId\nHAVING COUNT(cr.raceId) = 2;",
+    "column_probe": {
+      "alias_map": {
+        "c": "constructors",
+        "cr": "constructorresults"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 955,
+    "db_id": "formula_1",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "SYNTAX",
+    "pred_sql": "SELECT year, AVG(milliseconds) AS average_time_seconds\nFROM results\nJOIN races ON results.raceId = races.raceId\nWHERE races.year < 1975 AND results.time IS NOT NULL\nGROUP BY year;",
+    "column_probe": {
+      "alias_map": {
+        "results": "results",
+        "races": "races"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 959,
+    "db_id": "formula_1",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT r.fastestLap\nFROM results r\nJOIN driverStandings ds ON r.driverId = ds.driverId\nJOIN races ra ON r.raceId = ra.raceId\nWHERE ds.position = 1 AND ra.year = 2009;",
+    "column_probe": {
+      "alias_map": {
+        "r": "results",
+        "ds": "driverstandings",
+        "ra": "races"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 962,
+    "db_id": "formula_1",
+    "difficulty": "challenging",
+    "error_type": "Syntax Error",
+    "manual_label": "AGG_LOGIC",
+    "pred_sql": "SELECT \n    (COUNT(DISTINCT l.driverId) * 100.0 / NULLIF(COUNT(DISTINCT r.driverId), 0)) AS percentage\nFROM \n    results r\nJOIN \n    drivers d ON r.driverId = d.driverId\nJOIN \n    lapTimes l ON r.raceId = l.raceId AND r.driverId = l.driverId\nWHERE \n    d.dob < '1985-01-01' \n    AND r.year BETWEEN 2000 AND 2005 \n    AND l.lap > 50;",
+    "column_probe": {
+      "alias_map": {
+        "r": "results",
+        "d": "drivers",
+        "l": "laptimes"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [
+        {
+          "qualifier": "r",
+          "resolved_table": "results",
+          "column": "year",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [
+            "seasons",
+            "races"
+          ],
+          "exec_probe": true,
+          "exec_message": "ok"
+        }
+      ],
+      "unresolved_refs": [],
+      "has_invalid_ref": true,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 963,
+    "db_id": "formula_1",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "VALUE_FORMAT",
+    "pred_sql": "SELECT COUNT(DISTINCT d.driverId) AS FrenchDriversUnderTwoMinutes\nFROM drivers d\nJOIN lapTimes lt ON d.driverId = lt.driverId\nWHERE d.nationality = 'French' AND lt.time < '02:00.00';",
+    "column_probe": {
+      "alias_map": {
+        "d": "drivers",
+        "lt": "laptimes"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 967,
+    "db_id": "formula_1",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT code \nFROM drivers \nORDER BY dob DESC \nLIMIT 3;",
+    "column_probe": {
+      "alias_map": {
+        "drivers": "drivers"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 978,
+    "db_id": "formula_1",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT COUNT(*) AS circuit_count, location, lat, lng \nFROM circuits \nWHERE country = 'Austria' \nGROUP BY location, lat, lng;",
+    "column_probe": {
+      "alias_map": {
+        "circuits": "circuits"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 981,
+    "db_id": "formula_1",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT d.forename || ' ' || d.surname AS driver_name, MIN(r.date) AS first_qualifying_date, r.time\nFROM drivers d\nJOIN qualifying q ON d.driverId = q.driverId\nJOIN races r ON q.raceId = r.raceId\nWHERE d.dob = (SELECT MAX(dob) FROM drivers)\nGROUP BY d.driverId",
+    "column_probe": {
+      "alias_map": {
+        "d": "drivers",
+        "q": "qualifying",
+        "r": "races",
+        "drivers": "drivers"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 988,
+    "db_id": "formula_1",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT d.forename || ' ' || d.surname AS full_name, \n       AVG(p.milliseconds) AS avg_duration\nFROM drivers d\nJOIN pitStops p ON d.driverId = p.driverId\nWHERE d.nationality = 'German' \n  AND strftime('%Y', d.dob) BETWEEN '1980' AND '1985'\nGROUP BY d.driverId\nORDER BY avg_duration ASC\nLIMIT 3;",
+    "column_probe": {
+      "alias_map": {
+        "d": "drivers",
+        "p": "pitstops"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 989,
+    "db_id": "formula_1",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT d.forename || ' ' || d.surname AS champion, r.time\nFROM results res\nJOIN races r ON res.raceId = r.raceId\nJOIN drivers d ON res.driverId = d.driverId\nWHERE r.year = 2008 AND r.name = 'Canadian Grand Prix' AND res.position = 1;",
+    "column_probe": {
+      "alias_map": {
+        "res": "results",
+        "r": "races",
+        "d": "drivers"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1001,
+    "db_id": "formula_1",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT d.forename || ' ' || d.surname AS full_name\nFROM qualifying q\nJOIN races r ON q.raceId = r.raceId\nJOIN drivers d ON q.driverId = d.driverId\nWHERE r.year = 2008 AND r.round = 3 AND q.position = 1;",
+    "column_probe": {
+      "alias_map": {
+        "q": "qualifying",
+        "r": "races",
+        "d": "drivers"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1002,
+    "db_id": "formula_1",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT \n    d.forename || ' ' || d.surname AS full_name, \n    d.nationality, \n    r.name AS race_name\nFROM \n    drivers d\nJOIN \n    results res ON d.driverId = res.driverId\nJOIN \n    races r ON res.raceId = r.raceId\nWHERE \n    d.dob = (SELECT MAX(dob) FROM drivers)\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "d": "drivers",
+        "res": "results",
+        "r": "races",
+        "drivers": "drivers"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1003,
+    "db_id": "formula_1",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT COUNT(*) AS accident_count\nFROM results r\nJOIN races ra ON r.raceId = ra.raceId\nWHERE ra.name = 'Canadian Grand Prix' \nAND r.statusId = 3\nAND r.driverId = (\n    SELECT driverId\n    FROM results\n    JOIN races ON results.raceId = races.raceId\n    WHERE races.name = 'Canadian Grand Prix'\n    GROUP BY driverId\n    ORDER BY COUNT(*) DESC\n    LIMIT 1\n);",
+    "column_probe": {
+      "alias_map": {
+        "r": "results",
+        "ra": "races",
+        "results": "results",
+        "races": "races"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1011,
+    "db_id": "formula_1",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT d.forename || ' ' || d.surname AS full_name\nFROM lapTimes lt\nJOIN drivers d ON lt.driverId = d.driverId\nORDER BY lt.milliseconds ASC\nLIMIT 20;",
+    "column_probe": {
+      "alias_map": {
+        "lt": "laptimes",
+        "d": "drivers"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 1014,
+    "db_id": "formula_1",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT l.raceId, l.driverId, l.lap, l.time, l.milliseconds, c.name AS circuitName\nFROM lapTimes l\nJOIN races r ON l.raceId = r.raceId\nJOIN circuits c ON r.circuitId = c.circuitId\nWHERE c.country = 'Italy' AND l.time = (\n    SELECT MIN(time)\n    FROM lapTimes\n    WHERE raceId = l.raceId\n)\nORDER BY l.raceId, l.lap;",
+    "column_probe": {
+      "alias_map": {
+        "l": "laptimes",
+        "r": "races",
+        "c": "circuits",
+        "laptimes": "laptimes"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 726,
+    "db_id": "superhero",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT superhero_name, height_cm\nFROM superhero\nJOIN publisher ON superhero.publisher_id = publisher.id\nWHERE publisher.publisher_name = 'Marvel Comics'\nORDER BY height_cm DESC;",
+    "column_probe": {
+      "alias_map": {
+        "superhero": "superhero",
+        "publisher": "publisher"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 728,
+    "db_id": "superhero",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT c.colour, COUNT(s.id) AS superhero_count\nFROM superhero s\nJOIN colour c ON s.eye_colour_id = c.id\nJOIN publisher p ON s.publisher_id = p.id\nWHERE p.publisher_name = 'Marvel Comics'\nGROUP BY c.colour\nORDER BY superhero_count DESC;",
+    "column_probe": {
+      "alias_map": {
+        "s": "superhero",
+        "c": "colour",
+        "p": "publisher"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 743,
+    "db_id": "superhero",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "DOMAIN",
+    "pred_sql": "SELECT \n    (COUNT(CASE WHEN a.alignment = 'Bad' THEN 1 END) * 100.0 / COUNT(s.id)) AS percentage,\n    COUNT(CASE WHEN a.alignment = 'Bad' AND p.publisher_name = 'Marvel Comics' THEN 1 END) AS marvel_count\nFROM \n    superhero s\nJOIN \n    alignment a ON s.alignment_id = a.id\nJOIN \n    publisher p ON s.publisher_id = p.id;",
+    "column_probe": {
+      "alias_map": {
+        "s": "superhero",
+        "a": "alignment",
+        "p": "publisher"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 753,
+    "db_id": "superhero",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "JOIN_PATH",
+    "pred_sql": "SELECT superhero_name \nFROM superhero \nWHERE height_cm BETWEEN 170 AND 190 \nAND eye_colour_id IS NULL;",
+    "column_probe": {
+      "alias_map": {
+        "superhero": "superhero"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 758,
+    "db_id": "superhero",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "VALUE_FORMAT",
+    "pred_sql": "SELECT c.colour \nFROM superhero s \nJOIN race r ON s.race_id = r.id \nJOIN colour c ON s.hair_colour_id = c.id \nWHERE s.height_cm = 185 AND r.race = 'human';",
+    "column_probe": {
+      "alias_map": {
+        "s": "superhero",
+        "r": "race",
+        "c": "colour"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 766,
+    "db_id": "superhero",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT s.full_name\nFROM superhero s\nJOIN hero_attribute ha ON s.id = ha.hero_id\nJOIN attribute a ON ha.attribute_id = a.id\nWHERE a.attribute_name = 'strength'\nAND ha.attribute_value = (\n    SELECT MAX(attribute_value)\n    FROM hero_attribute ha2\n    JOIN attribute a2 ON ha2.attribute_id = a2.id\n    WHERE a2.attribute_name = 'strength'\n);",
+    "column_probe": {
+      "alias_map": {
+        "s": "superhero",
+        "ha": "hero_attribute",
+        "a": "attribute",
+        "ha2": "hero_attribute",
+        "a2": "attribute"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 769,
+    "db_id": "superhero",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT s.superhero_name\nFROM superhero s\nJOIN publisher p ON s.publisher_id = p.id\nJOIN hero_attribute ha ON s.id = ha.hero_id\nJOIN attribute a ON ha.attribute_id = a.id\nWHERE a.attribute_name = 'durability' AND p.publisher_name = 'Dark Horse Comics'\nORDER BY ha.attribute_value DESC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "s": "superhero",
+        "p": "publisher",
+        "ha": "hero_attribute",
+        "a": "attribute"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 772,
+    "db_id": "superhero",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT c1.colour AS eye_colour, c2.colour AS hair_colour, c3.colour AS skin_colour\nFROM superhero s\nJOIN colour c1 ON s.eye_colour_id = c1.id\nJOIN colour c2 ON s.hair_colour_id = c2.id\nJOIN colour c3 ON s.skin_colour_id = c3.id\nJOIN gender g ON s.gender_id = g.id\nJOIN publisher p ON s.publisher_id = p.id\nWHERE g.gender = 'Female' AND p.publisher_name = 'Dark Horse Comics';",
+    "column_probe": {
+      "alias_map": {
+        "s": "superhero",
+        "c1": "colour",
+        "c2": "colour",
+        "c3": "colour",
+        "g": "gender",
+        "p": "publisher"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 775,
+    "db_id": "superhero",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT \n    (COUNT(CASE WHEN c.colour = 'Blue' THEN 1 END) * 100.0 / COUNT(*)) AS percentage\nFROM \n    superhero s\nJOIN \n    gender g ON s.gender_id = g.id\nJOIN \n    colour c ON s.eye_colour_id = c.id\nWHERE \n    g.gender = 'Female';",
+    "column_probe": {
+      "alias_map": {
+        "s": "superhero",
+        "g": "gender",
+        "c": "colour"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 791,
+    "db_id": "superhero",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "AGG_LOGIC",
+    "pred_sql": "SELECT AVG(height_cm) AS average_height FROM superhero;",
+    "column_probe": {
+      "alias_map": {
+        "superhero": "superhero"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 829,
+    "db_id": "superhero",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT \n    ABS(\n        (SELECT COUNT(*) FROM superhero s JOIN publisher p ON s.publisher_id = p.id WHERE p.publisher_name = 'DC Comics') -\n        (SELECT COUNT(*) FROM superhero s JOIN publisher p ON s.publisher_id = p.id WHERE p.publisher_name = 'Marvel Comics')\n    ) AS difference",
+    "column_probe": {
+      "alias_map": {
+        "s": "superhero",
+        "p": "publisher"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 531,
+    "db_id": "codebase_community",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT DisplayName, Reputation \nFROM users \nWHERE DisplayName IN ('Harlan', 'Jarrod Dixon') \nORDER BY Reputation DESC \nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "users": "users"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 533,
+    "db_id": "codebase_community",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT COUNT(*) \nFROM users \nWHERE LastAccessDate > '2014-09-01';",
+    "column_probe": {
+      "alias_map": {
+        "users": "users"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 539,
+    "db_id": "codebase_community",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT OwnerDisplayName \nFROM posts \nWHERE Title = 'Eliciting priors from experts';",
+    "column_probe": {
+      "alias_map": {
+        "posts": "posts"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 544,
+    "db_id": "codebase_community",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT LastEditorDisplayName \nFROM posts \nWHERE Title = \"Examples for teaching: Correlation does not mean causation\";",
+    "column_probe": {
+      "alias_map": {
+        "posts": "posts"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 563,
+    "db_id": "codebase_community",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "VALUE_FORMAT",
+    "pred_sql": "SELECT p.FavoriteCount \nFROM posts p\nJOIN comments c ON p.Id = c.PostId\nWHERE c.UserId = 3025 AND c.CreationDate = '2014-04-23 20:29:39';",
+    "column_probe": {
+      "alias_map": {
+        "p": "posts",
+        "c": "comments"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 565,
+    "db_id": "codebase_community",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "VALUE_FORMAT",
+    "pred_sql": "SELECT p.ClosedDate IS NULL AS IsWellFinished\nFROM comments c\nJOIN posts p ON c.PostId = p.Id\nWHERE c.UserId = 23853 AND c.CreationDate = '2013-07-12 09:08:18.0';",
+    "column_probe": {
+      "alias_map": {
+        "c": "comments",
+        "p": "posts"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 567,
+    "db_id": "codebase_community",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT COUNT(*) AS PostCount\nFROM posts\nWHERE OwnerDisplayName = 'Tiago Pasqualini';",
+    "column_probe": {
+      "alias_map": {
+        "posts": "posts"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 581,
+    "db_id": "codebase_community",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT OwnerDisplayName \nFROM posts \nWHERE Title = 'Open source tools for visualizing multi-dimensional data';",
+    "column_probe": {
+      "alias_map": {
+        "posts": "posts"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 584,
+    "db_id": "codebase_community",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT Text \nFROM comments \nWHERE PostId = (SELECT Id FROM posts WHERE Title = 'Why square the difference instead of taking the absolute value in standard deviation?');",
+    "column_probe": {
+      "alias_map": {
+        "comments": "comments",
+        "posts": "posts"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 586,
+    "db_id": "codebase_community",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT u.DisplayName\nFROM votes v\nJOIN posts p ON v.PostId = p.Id\nJOIN users u ON v.UserId = u.Id\nWHERE v.BountyAmount = 50 AND p.Title LIKE '%variance%';",
+    "column_probe": {
+      "alias_map": {
+        "v": "votes",
+        "p": "posts",
+        "u": "users"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 587,
+    "db_id": "codebase_community",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "JOIN_PATH",
+    "pred_sql": "SELECT p.Title, ph.Comment, AVG(p.ViewCount) AS AverageViewCount\nFROM posts p\nJOIN postHistory ph ON p.Id = ph.PostId\nJOIN tags t ON p.Tags LIKE '%<humor>%'\nGROUP BY p.Title, ph.Comment;",
+    "column_probe": {
+      "alias_map": {
+        "p": "posts",
+        "ph": "posthistory",
+        "t": "tags"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 592,
+    "db_id": "codebase_community",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT COUNT(DISTINCT UserId) AS UserCount\nFROM badges\nGROUP BY UserId\nHAVING COUNT(Name) > 5;",
+    "column_probe": {
+      "alias_map": {
+        "badges": "badges"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 595,
+    "db_id": "codebase_community",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT u.Id, u.DisplayName\nFROM users u\nJOIN posts p ON u.Id = p.OwnerUserId\nJOIN postHistory ph ON p.Id = ph.PostId\nGROUP BY u.Id, p.Id\nHAVING COUNT(ph.Id) = 1 AND p.ViewCount >= 1000;",
+    "column_probe": {
+      "alias_map": {
+        "u": "users",
+        "p": "posts",
+        "ph": "posthistory"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 634,
+    "db_id": "codebase_community",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT OwnerDisplayName, MAX(ViewCount) AS MaxViewCount\nFROM posts\nWHERE OwnerDisplayName IN ('Harvey Motulsky', 'Noah Snyder')\nGROUP BY OwnerDisplayName\nORDER BY MaxViewCount DESC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "posts": "posts"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 639,
+    "db_id": "codebase_community",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "JOIN_PATH",
+    "pred_sql": "SELECT \n    (COUNT(CASE WHEN Tags.TagName = 'r' THEN 1 END) * 100.0 / COUNT(*)) AS percentage\nFROM \n    posts\nJOIN \n    users ON posts.OwnerUserId = users.Id\nLEFT JOIN \n    tags ON posts.Id = tags.ExcerptPostId\nWHERE \n    users.DisplayName = 'Community';",
+    "column_probe": {
+      "alias_map": {
+        "posts": "posts",
+        "users": "users",
+        "tags": "tags"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 640,
+    "db_id": "codebase_community",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "JOIN_PATH",
+    "pred_sql": "SELECT \n    (SELECT SUM(ViewCount) FROM posts WHERE OwnerDisplayName = 'Mornington') - \n    (SELECT SUM(ViewCount) FROM posts WHERE OwnerDisplayName = 'Amos') AS ViewCountDifference;",
+    "column_probe": {
+      "alias_map": {
+        "posts": "posts"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 665,
+    "db_id": "codebase_community",
+    "difficulty": "moderate",
+    "error_type": "Syntax Error",
+    "manual_label": null,
+    "pred_sql": "SELECT COUNT(Id) / 12.0 AS AverageMonthlyLinks\nFROM postLinks\nWHERE YEAR(CreationDate) = 2010 \nAND PostId IN (\n    SELECT Id \n    FROM posts \n    WHERE AnswerCount <= 2\n);",
+    "column_probe": {
+      "alias_map": {
+        "postlinks": "postlinks",
+        "posts": "posts"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 682,
+    "db_id": "codebase_community",
+    "difficulty": "moderate",
+    "error_type": "Syntax Error",
+    "manual_label": "SYNTAX",
+    "pred_sql": "SELECT p.Id, p.OwnerDisplayName\nFROM posts p\nWHERE p.FavoriteCount = (\n    SELECT MAX(FavoriteCount)\n    FROM posts\n    WHERE strftime('%Y', CreationDate) = '2010'\n)\nAND strftime('%Y', p.CreationDate) = '2010';",
+    "column_probe": {
+      "alias_map": {
+        "p": "posts",
+        "posts": "posts"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [
+        {
+          "qualifier": "p",
+          "resolved_table": "posts",
+          "column": "creationdate",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [
+            "comments",
+            "postHistory",
+            "postLinks",
+            "users",
+            "votes"
+          ],
+          "exec_probe": true,
+          "exec_message": "ok"
+        }
+      ],
+      "unresolved_refs": [],
+      "has_invalid_ref": true,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 683,
+    "db_id": "codebase_community",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "SYNTAX",
+    "pred_sql": "SELECT \n    (COUNT(CASE WHEN u.Reputation > 1000 THEN p.Id END) * 100.0 / COUNT(p.Id)) AS percentage\nFROM \n    posts p\nJOIN \n    users u ON p.OwnerUserId = u.Id\nWHERE \n    strftime('%Y', p.CreaionDate) = '2011';",
+    "column_probe": {
+      "alias_map": {
+        "p": "posts",
+        "u": "users"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 685,
+    "db_id": "codebase_community",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT p.ViewCount, u.DisplayName\nFROM posts p\nJOIN users u ON p.LastEditorUserId = u.Id\nWHERE p.Title = 'Computer Game Datasets';",
+    "column_probe": {
+      "alias_map": {
+        "p": "posts",
+        "u": "users"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 694,
+    "db_id": "codebase_community",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT c.Text, c.UserDisplayName\nFROM comments c\nJOIN posts p ON c.PostId = p.Id\nWHERE p.Title = 'Analysing wind data with R'\nORDER BY c.CreationDate DESC\nLIMIT 10;",
+    "column_probe": {
+      "alias_map": {
+        "c": "comments",
+        "p": "posts"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 710,
+    "db_id": "codebase_community",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT COUNT(*) \nFROM comments \nWHERE PostId IN (SELECT Id FROM posts WHERE CommentCount = 1) \nAND Score = 0;",
+    "column_probe": {
+      "alias_map": {
+        "comments": "comments",
+        "posts": "posts"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 340,
+    "db_id": "card_games",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "DOMAIN",
+    "pred_sql": "SELECT * FROM cards WHERE cardKingdomFoilId IS NOT NULL AND cardKingdomId IS NOT NULL;",
+    "column_probe": {
+      "alias_map": {
+        "cards": "cards"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 341,
+    "db_id": "card_games",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "DOMAIN",
+    "pred_sql": "SELECT * FROM cards \nWHERE borderColor = 'borderless' \nAND (cardKingdomFoilId IS NULL OR cardKingdomId IS NULL);",
+    "column_probe": {
+      "alias_map": {
+        "cards": "cards"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 344,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT c.*\nFROM cards c\nJOIN legalities l ON c.uuid = l.uuid\nWHERE c.rarity = 'mythic' AND l.status = 'Banned' AND l.format = 'gladiator';",
+    "column_probe": {
+      "alias_map": {
+        "c": "cards",
+        "l": "legalities"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [
+        {
+          "qualifier": "c",
+          "resolved_table": "cards",
+          "column": "*",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [],
+          "exec_probe": true,
+          "exec_message": "ok"
+        }
+      ],
+      "unresolved_refs": [],
+      "has_invalid_ref": true,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 347,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "VALUE_FORMAT",
+    "pred_sql": "SELECT \n    c.id AS card_id, \n    r.text AS ruling_text, \n    CASE \n        WHEN c.hasContentWarning = 1 THEN 'Missing or degraded properties and values' \n        ELSE 'No missing or degraded properties and values' \n    END AS properties_status\nFROM \n    cards c\nJOIN \n    rulings r ON c.uuid = r.uuid\nWHERE \n    c.artist = 'Stephen Daniele';",
+    "column_probe": {
+      "alias_map": {
+        "c": "cards",
+        "r": "rulings"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 349,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT c.name, c.artist\nFROM cards c\nJOIN rulings r ON c.uuid = r.uuid\nWHERE c.isPromo = 1\nGROUP BY c.uuid\nORDER BY COUNT(r.uuid) DESC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "c": "cards",
+        "r": "rulings"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 352,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "AGG_LOGIC",
+    "pred_sql": "SELECT (COUNT(CASE WHEN f.language = 'Chinese Simplified' THEN 1 END) * 100.0 / COUNT(*)) AS percentage\nFROM cards c\nLEFT JOIN foreign_data f ON c.uuid = f.uuid;",
+    "column_probe": {
+      "alias_map": {
+        "c": "cards",
+        "f": "foreign_data"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 366,
+    "db_id": "card_games",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT r.text \nFROM cards c \nJOIN rulings r ON c.uuid = r.uuid \nWHERE c.name = 'Benalish Knight';",
+    "column_probe": {
+      "alias_map": {
+        "c": "cards",
+        "r": "rulings"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 377,
+    "db_id": "card_games",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "VALUE_FORMAT",
+    "pred_sql": "SELECT COUNT(*) \nFROM cards \nWHERE originalType = 'Summon - Angel' \nAND subtypes NOT LIKE '%Angel%';",
+    "column_probe": {
+      "alias_map": {
+        "cards": "cards"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 391,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT c.*\nFROM cards c\nJOIN foreign_data f ON c.uuid = f.uuid\nWHERE c.originalType = 'Artifact' AND c.colors = 'B';",
+    "column_probe": {
+      "alias_map": {
+        "c": "cards",
+        "f": "foreign_data"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [
+        {
+          "qualifier": "c",
+          "resolved_table": "cards",
+          "column": "*",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [],
+          "exec_probe": true,
+          "exec_message": "ok"
+        }
+      ],
+      "unresolved_refs": [],
+      "has_invalid_ref": true,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 402,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT \n    (COUNT(*) * 100.0 / (SELECT COUNT(*) FROM cards WHERE isStorySpotlight = 1)) AS percentage,\n    id\nFROM \n    cards\nWHERE \n    isStorySpotlight = 1 AND isTextless = 0\nGROUP BY \n    id;",
+    "column_probe": {
+      "alias_map": {
+        "cards": "cards"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 405,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT COUNT(*) \nFROM set_translations \nWHERE setCode IN (SELECT code FROM sets WHERE block = 'Commander') \nAND language = 'Portuguese (Brasil)';",
+    "column_probe": {
+      "alias_map": {
+        "set_translations": "set_translations",
+        "sets": "sets"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 407,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "error_type": "Syntax Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT DISTINCT subtypes AS type FROM foreign_data WHERE language = 'German' AND subtypes IS NOT NULL\nUNION\nSELECT DISTINCT supertypes AS type FROM foreign_data WHERE language = 'German' AND supertypes IS NOT NULL;",
+    "column_probe": {
+      "alias_map": {
+        "foreign_data": "foreign_data"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 408,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "JOIN_PATH",
+    "pred_sql": "SELECT COUNT(*) \nFROM cards \nWHERE (power IS NULL OR power = '*') \nAND text LIKE '%triggered ability%';",
+    "column_probe": {
+      "alias_map": {
+        "cards": "cards"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 412,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT fd.name \nFROM cards c \nJOIN foreign_data fd ON c.uuid = fd.uuid \nWHERE c.artist = 'Matthew D. Wilson' \n  AND c.type = 'Creature' \n  AND c.layout = 'normal' \n  AND c.borderColor = 'black' \n  AND fd.language = 'French';",
+    "column_probe": {
+      "alias_map": {
+        "c": "cards",
+        "fd": "foreign_data"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 415,
+    "db_id": "card_games",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT (COUNT(CASE WHEN c.hasContentWarning = 0 THEN 1 END) * 100.0 / COUNT(*)) AS percentage\nFROM cards c\nJOIN legalities l ON c.uuid = l.uuid\nWHERE l.format = 'commander' AND l.status = 'legal';",
+    "column_probe": {
+      "alias_map": {
+        "c": "cards",
+        "l": "legalities"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 416,
+    "db_id": "card_games",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "AGG_LOGIC",
+    "pred_sql": "SELECT \n    (COUNT(CASE WHEN f.language = 'French' THEN 1 END) * 100.0 / COUNT(*)) AS percentage\nFROM \n    cards c\nLEFT JOIN \n    foreign_data f ON c.uuid = f.uuid\nWHERE \n    c.power IS NULL OR c.power = '*';",
+    "column_probe": {
+      "alias_map": {
+        "c": "cards",
+        "f": "foreign_data"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 427,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "JOIN_PATH",
+    "pred_sql": "SELECT DISTINCT fd.language\nFROM foreign_data fd\nJOIN sets s ON s.code = 'ARC'\nJOIN cards c ON c.uuid = fd.uuid\nWHERE s.name = 'Archenemy';",
+    "column_probe": {
+      "alias_map": {
+        "fd": "foreign_data",
+        "s": "sets",
+        "c": "cards"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 440,
+    "db_id": "card_games",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT language \nFROM foreign_data \nWHERE uuid = (SELECT uuid FROM cards WHERE name = 'A Pedra Fellwar');",
+    "column_probe": {
+      "alias_map": {
+        "foreign_data": "foreign_data",
+        "cards": "cards"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 459,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT name, convertedManaCost \nFROM cards \nWHERE name IN ('Serra Angel', 'Shrine Keeper');",
+    "column_probe": {
+      "alias_map": {
+        "cards": "cards"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 465,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (JOIN_PATH, CASE_LOGIC)",
+    "pred_sql": "SELECT f.*\nFROM cards c\nJOIN foreign_data f ON c.uuid = f.uuid\nWHERE c.name = 'Ancestor''s Chosen' AND f.language = 'Korean';",
+    "column_probe": {
+      "alias_map": {
+        "c": "cards",
+        "f": "foreign_data"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [
+        {
+          "qualifier": "f",
+          "resolved_table": "foreign_data",
+          "column": "*",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [],
+          "exec_probe": true,
+          "exec_message": "ok"
+        }
+      ],
+      "unresolved_refs": [],
+      "has_invalid_ref": true,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 469,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "error_type": "Syntax Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT COUNT(*) > 0 AS appears_on_mtgo\nFROM cards\nWHERE name = 'Angel of Mercy' AND mtgoCode IS NOT NULL;",
+    "column_probe": {
+      "alias_map": {
+        "cards": "cards"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 473,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT c.name, s.isForeignOnly \nFROM cards c \nJOIN sets s ON c.setCode = s.code \nWHERE c.name = 'Adarkar Valkyrie' AND s.isForeignOnly = 1;",
+    "column_probe": {
+      "alias_map": {
+        "c": "cards",
+        "s": "sets"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 477,
+    "db_id": "card_games",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT DISTINCT artist \nFROM cards \nWHERE setCode = 'Coldsnap' AND artist IN ('Jeremy Jarvis', 'Aaron Miller', 'Chippy');",
+    "column_probe": {
+      "alias_map": {
+        "cards": "cards"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 479,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "VALUE_FORMAT",
+    "pred_sql": "SELECT COUNT(*) \nFROM cards \nWHERE convertedManaCost > 5 \nAND setCode = 'Coldsnap' \nAND (power = '*' OR power IS NULL);",
+    "column_probe": {
+      "alias_map": {
+        "cards": "cards"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 480,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT flavorText \nFROM foreign_data \nWHERE language = 'Italian' \nAND uuid = (SELECT uuid FROM cards WHERE name = 'Ancestor''s Chosen');",
+    "column_probe": {
+      "alias_map": {
+        "foreign_data": "foreign_data",
+        "cards": "cards"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 483,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "JOIN_PATH",
+    "pred_sql": "SELECT fd.text \nFROM foreign_data fd \nJOIN cards c ON fd.uuid = c.uuid \nWHERE c.setCode = 'Coldsnap' AND fd.language = 'Italian';",
+    "column_probe": {
+      "alias_map": {
+        "fd": "foreign_data",
+        "c": "cards"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 484,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT fd.name\nFROM cards c\nJOIN foreign_data fd ON c.uuid = fd.uuid\nWHERE c.setCode = 'Coldsnap' AND fd.language = 'Italian' AND c.convertedManaCost = (\n    SELECT MAX(convertedManaCost)\n    FROM cards\n    WHERE setCode = 'Coldsnap'\n);",
+    "column_probe": {
+      "alias_map": {
+        "c": "cards",
+        "fd": "foreign_data",
+        "cards": "cards"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 486,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "JOIN_PATH",
+    "pred_sql": "SELECT (SUM(CASE WHEN convertedManaCost = 7 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) AS percentage\nFROM cards\nWHERE setCode = 'Coldsnap';",
+    "column_probe": {
+      "alias_map": {
+        "cards": "cards"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 487,
+    "db_id": "card_games",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "DOMAIN",
+    "pred_sql": "SELECT \n    (COUNT(CASE WHEN cardKingdomFoilId IS NOT NULL AND cardKingdomId IS NOT NULL THEN 1 END) * 100.0) / COUNT(*) AS percentage_incredibly_powerful\nFROM \n    cards\nWHERE \n    setCode = 'Coldsnap';",
+    "column_probe": {
+      "alias_map": {
+        "cards": "cards"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 518,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT l.format, GROUP_CONCAT(c.name) AS banned_cards\nFROM legalities l\nJOIN cards c ON l.uuid = c.uuid\nWHERE l.status = 'Banned'\nGROUP BY l.format\nHAVING COUNT(l.status) = (\n    SELECT MAX(banned_count)\n    FROM (\n        SELECT COUNT(*) AS banned_count\n        FROM legalities\n        WHERE status = 'Banned'\n        GROUP BY format\n    )\n);",
+    "column_probe": {
+      "alias_map": {
+        "l": "legalities",
+        "c": "cards",
+        "legalities": "legalities"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 530,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT DISTINCT frameVersion, c.*\nFROM cards c\nWHERE c.artist = 'Allen Williams'\n   OR c.uuid IN (SELECT uuid FROM legalities WHERE status = 'Banned');",
+    "column_probe": {
+      "alias_map": {
+        "c": "cards",
+        "legalities": "legalities"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [
+        {
+          "qualifier": "c",
+          "resolved_table": "cards",
+          "column": "*",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [],
+          "exec_probe": true,
+          "exec_message": "ok"
+        }
+      ],
+      "unresolved_refs": [],
+      "has_invalid_ref": true,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 197,
+    "db_id": "toxicology",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT AVG(oxygen_count) AS average_oxygen_atoms\nFROM (\n    SELECT m.molecule_id, COUNT(a.atom_id) AS oxygen_count\n    FROM molecule m\n    JOIN bond b ON m.molecule_id = b.molecule_id\n    JOIN connected c ON b.bond_id = c.bond_id\n    JOIN atom a ON c.atom_id2 = a.atom_id\n    WHERE b.bond_type = '-' AND a.element = 'o'\n    GROUP BY m.molecule_id\n);",
+    "column_probe": {
+      "alias_map": {
+        "m": "molecule",
+        "b": "bond",
+        "c": "connected",
+        "a": "atom"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 198,
+    "db_id": "toxicology",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT AVG(single_bond_count) AS average_single_bonded_carcinogenic_molecules\nFROM (\n    SELECT m.molecule_id, COUNT(b.bond_id) AS single_bond_count\n    FROM molecule m\n    JOIN bond b ON m.molecule_id = b.molecule_id\n    WHERE m.label = '+' AND b.bond_type = '-'\n    GROUP BY m.molecule_id\n);",
+    "column_probe": {
+      "alias_map": {
+        "m": "molecule",
+        "b": "bond"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 200,
+    "db_id": "toxicology",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "VALUE_FORMAT",
+    "pred_sql": "SELECT DISTINCT m.molecule_id, m.label\nFROM molecule m\nJOIN bond b ON m.molecule_id = b.molecule_id\nWHERE b.bond_type = '#' AND m.label = '+';",
+    "column_probe": {
+      "alias_map": {
+        "m": "molecule",
+        "b": "bond"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 201,
+    "db_id": "toxicology",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT \n    (COUNT(CASE WHEN a.element = 'c' THEN 1 END) * 100.0 / COUNT(a.atom_id)) AS carbon_percentage\nFROM \n    atom a\nJOIN \n    bond b ON a.molecule_id = b.molecule_id\nWHERE \n    b.bond_type = '='\nGROUP BY \n    a.molecule_id;",
+    "column_probe": {
+      "alias_map": {
+        "a": "atom",
+        "b": "bond"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 207,
+    "db_id": "toxicology",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "VALUE_FORMAT",
+    "pred_sql": "SELECT DISTINCT a.element\nFROM atom a\nJOIN connected c ON a.atom_id = c.atom_id OR a.atom_id = c.atom_id2\nJOIN bond b ON c.bond_id = b.bond_id\nWHERE b.bond_type = '='",
+    "column_probe": {
+      "alias_map": {
+        "a": "atom",
+        "c": "connected",
+        "b": "bond"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 208,
+    "db_id": "toxicology",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT label, COUNT(label) AS label_count\nFROM molecule\nWHERE molecule_id IN (\n    SELECT molecule_id\n    FROM atom\n    WHERE element = 'h'\n)\nGROUP BY label\nORDER BY label_count DESC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "molecule": "molecule",
+        "atom": "atom"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 212,
+    "db_id": "toxicology",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT element, COUNT(element) AS element_count\nFROM atom\nJOIN molecule ON atom.molecule_id = molecule.molecule_id\nWHERE molecule.label = '-'\nGROUP BY element\nORDER BY element_count ASC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "atom": "atom",
+        "molecule": "molecule"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 215,
+    "db_id": "toxicology",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT COUNT(DISTINCT a.atom_id) AS atom_count\nFROM atom a\nJOIN connected c ON a.atom_id = c.atom_id OR a.atom_id = c.atom_id2\nJOIN bond b ON c.bond_id = b.bond_id\nWHERE (a.element = 'i' OR a.element = 's') AND b.bond_type = '-';",
+    "column_probe": {
+      "alias_map": {
+        "a": "atom",
+        "c": "connected",
+        "b": "bond"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 218,
+    "db_id": "toxicology",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT \n    (COUNT(DISTINCT m.molecule_id) - SUM(CASE WHEN a.element = 'f' THEN 1 ELSE 0 END)) * 100.0 / COUNT(DISTINCT m.molecule_id) AS percentage_non_fluorine\nFROM \n    molecule m\nLEFT JOIN \n    atom a ON m.molecule_id = a.molecule_id\nWHERE \n    m.label = '+';",
+    "column_probe": {
+      "alias_map": {
+        "m": "molecule",
+        "a": "atom"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 219,
+    "db_id": "toxicology",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT \n    (SUM(CASE WHEN b.bond_type = '#' AND m.label = '+' THEN 1 ELSE 0 END) * 100.0) / \n    NULLIF(COUNT(b.bond_id), 0) AS percent\nFROM \n    bond b\nJOIN \n    molecule m ON b.molecule_id = m.molecule_id;",
+    "column_probe": {
+      "alias_map": {
+        "b": "bond",
+        "m": "molecule"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 231,
+    "db_id": "toxicology",
+    "difficulty": "challenging",
+    "error_type": "Syntax Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT bond_type, COUNT(bond_type) AS bond_count, \n       (SELECT carcinogenic FROM molecule WHERE molecule_id = 'TR010') AS is_carcinogenic\nFROM bond\nWHERE molecule_id = 'TR010'\nGROUP BY bond_type\nORDER BY bond_count DESC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "bond": "bond",
+        "molecule": "molecule"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 234,
+    "db_id": "toxicology",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT COUNT(*) \nFROM connected \nWHERE (atom_id = 'TR009_12' OR atom_id2 = 'TR009_12') \nAND bond_id IN (SELECT bond_id FROM bond WHERE molecule_id = 'TR009');",
+    "column_probe": {
+      "alias_map": {
+        "connected": "connected",
+        "bond": "bond"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 239,
+    "db_id": "toxicology",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT COUNT(*) AS connection_count\nFROM connected\nWHERE atom_id = 'TR%_19' OR atom_id2 = 'TR%_19';",
+    "column_probe": {
+      "alias_map": {
+        "connected": "connected"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 244,
+    "db_id": "toxicology",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT m.label\nFROM molecule m\nJOIN bond b ON m.molecule_id = b.molecule_id\nWHERE b.bond_type = ' = '\nGROUP BY m.molecule_id\nORDER BY COUNT(b.bond_id) DESC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "m": "molecule",
+        "b": "bond"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 247,
+    "db_id": "toxicology",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT DISTINCT element \nFROM atom \nWHERE atom_id NOT IN (SELECT atom_id FROM connected);",
+    "column_probe": {
+      "alias_map": {
+        "atom": "atom",
+        "connected": "connected"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 248,
+    "db_id": "toxicology",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT a1.atom_id, a1.element\nFROM connected c\nJOIN atom a1 ON c.atom_id = a1.atom_id\nJOIN atom a2 ON c.atom_id2 = a2.atom_id\nJOIN bond b ON c.bond_id = b.bond_id\nWHERE b.molecule_id = 'TR041' AND b.bond_type = '#';",
+    "column_probe": {
+      "alias_map": {
+        "c": "connected",
+        "a1": "atom",
+        "a2": "atom",
+        "b": "bond"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 249,
+    "db_id": "toxicology",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT DISTINCT a.element \nFROM atom a \nJOIN bond b ON a.molecule_id = b.molecule_id \nWHERE b.bond_id = 'TR144_8_19';",
+    "column_probe": {
+      "alias_map": {
+        "a": "atom",
+        "b": "bond"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 260,
+    "db_id": "toxicology",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "JOIN_PATH",
+    "pred_sql": "SELECT COUNT(a.atom_id) AS total_atoms\nFROM atom a\nJOIN connected c ON a.atom_id = c.atom_id OR a.atom_id = c.atom_id2\nJOIN bond b ON c.bond_id = b.bond_id\nJOIN molecule m ON b.molecule_id = m.molecule_id\nWHERE b.bond_type = '#' AND (a.element = 'p' OR a.element = 'br');",
+    "column_probe": {
+      "alias_map": {
+        "a": "atom",
+        "c": "connected",
+        "b": "bond",
+        "m": "molecule"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 263,
+    "db_id": "toxicology",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT \n    (SUM(CASE WHEN a.element = 'cl' THEN 1 ELSE 0 END) * 100.0 / COUNT(a.atom_id)) AS percent\nFROM \n    atom a\nJOIN \n    bond b ON a.molecule_id = b.molecule_id\nWHERE \n    b.bond_type = '-'\nGROUP BY \n    a.molecule_id;",
+    "column_probe": {
+      "alias_map": {
+        "a": "atom",
+        "b": "bond"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 281,
+    "db_id": "toxicology",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT a.element, COUNT(*) AS tally\nFROM atom a\nJOIN molecule m ON a.molecule_id = m.molecule_id\nWHERE m.label = '+' AND substr(a.atom_id, 7, 1) = '4'\nGROUP BY a.element;",
+    "column_probe": {
+      "alias_map": {
+        "a": "atom",
+        "m": "molecule"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 12,
+    "db_id": "california_schools",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "AGG_LOGIC",
+    "pred_sql": "SELECT MAX(frpm.`Percent (%) Eligible Free (Ages 5-17)`) AS Highest_Eligible_Free_Rate\nFROM frpm\nJOIN satscores ON frpm.CDSCode = satscores.cds\nWHERE (satscores.NumGE1500 * 1.0 / satscores.NumTstTakr) > 0.3\nAND frpm.`Enrollment (Ages 5-17)` > 0;",
+    "column_probe": {
+      "alias_map": {
+        "frpm": "frpm",
+        "satscores": "satscores"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 17,
+    "db_id": "california_schools",
+    "difficulty": "simple",
+    "error_type": "Syntax Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT s.\"Charter School Number\", AVG(sa.AvgScrWrite) AS Average_Writing_Score\nFROM satscores sa\nJOIN schools s ON sa.cds = s.CDSCode\nWHERE sa.AvgScrWrite > 499 AND s.\"Charter School Number\" IS NOT NULL\nGROUP BY s.\"Charter School Number\"\nORDER BY Average_Writing_Score DESC;",
+    "column_probe": {
+      "alias_map": {
+        "sa": "satscores",
+        "s": "schools"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [
+        {
+          "qualifier": "s",
+          "resolved_table": "schools",
+          "column": "charter school number",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [
+            "frpm"
+          ],
+          "exec_probe": true,
+          "exec_message": "ok"
+        }
+      ],
+      "unresolved_refs": [],
+      "has_invalid_ref": true,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 23,
+    "db_id": "california_schools",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT s.School AS School_Name, s.Street, s.City, s.Zip, s.State\nFROM frpm f\nJOIN schools s ON f.CDSCode = s.CDSCode\nWHERE ABS(f.`Enrollment (K-12)` - f.`Enrollment (Ages 5-17)`) > 30;",
+    "column_probe": {
+      "alias_map": {
+        "f": "frpm",
+        "s": "schools"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 24,
+    "db_id": "california_schools",
+    "difficulty": "moderate",
+    "error_type": "Syntax Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT s.School\nFROM schools s\nJOIN frpm f ON s.CDSCode = f.CDSCode\nJOIN satscores sa ON s.CDSCode = sa.cds\nWHERE (f.Free Meal Count (K-12) / f.Enrollment (K-12)) > 0.1\nAND sa.NumGE1500 > 0;",
+    "column_probe": {
+      "alias_map": {
+        "s": "schools",
+        "f": "frpm",
+        "sa": "satscores"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [
+        {
+          "qualifier": "f",
+          "resolved_table": "frpm",
+          "column": "free",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [],
+          "exec_probe": true,
+          "exec_message": "ok"
+        }
+      ],
+      "unresolved_refs": [],
+      "has_invalid_ref": true,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 25,
+    "db_id": "california_schools",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (JOIN_PATH, COLUMN_SELECT)",
+    "pred_sql": "SELECT s.School, s.FundingType\nFROM schools s\nJOIN satscores sa ON s.CDSCode = sa.cds\nWHERE s.City = 'Riverside'\nGROUP BY s.School, s.FundingType\nHAVING AVG(sa.AvgScrMath) > 400;",
+    "column_probe": {
+      "alias_map": {
+        "s": "schools",
+        "sa": "satscores"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 26,
+    "db_id": "california_schools",
+    "difficulty": "moderate",
+    "error_type": "Syntax Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT s.School AS School_Name, \n       s.Street || ', ' || s.City || ', ' || s.State || ' ' || s.Zip AS Full_Communication_Address\nFROM schools s\nJOIN frpm f ON s.CDSCode = f.CDSCode\nWHERE s.County = 'Monterey' \n  AND f.FRPM_Count_Ages_5_17 > 800;",
+    "column_probe": {
+      "alias_map": {
+        "s": "schools",
+        "f": "frpm"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [
+        {
+          "qualifier": "f",
+          "resolved_table": "frpm",
+          "column": "frpm_count_ages_5_17",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [],
+          "exec_probe": true,
+          "exec_message": "ok"
+        }
+      ],
+      "unresolved_refs": [],
+      "has_invalid_ref": true,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 27,
+    "db_id": "california_schools",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT s.School AS School_Name, AVG(sa.AvgScrWrite) AS Average_Writing_Score, s.Phone AS Communication_Number\nFROM schools s\nJOIN satscores sa ON s.CDSCode = sa.cds\nWHERE (s.OpenDate > '1991-01-01' OR s.ClosedDate < '2000-01-01')\nGROUP BY s.School, s.Phone;",
+    "column_probe": {
+      "alias_map": {
+        "s": "schools",
+        "sa": "satscores"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 28,
+    "db_id": "california_schools",
+    "difficulty": "challenging",
+    "error_type": "Syntax Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "WITH EnrollmentDifference AS (\n    SELECT \n        f.CDSCode,\n        f.`School Name`,\n        f.`Enrollment (K-12)` - f.`Enrollment (Ages 5-17)` AS Difference\n    FROM \n        frpm f\n    JOIN \n        schools s ON f.CDSCode = s.CDSCode\n    WHERE \n        s.FundingType = 'Locally Funded'\n),\nAverageDifference AS (\n    SELECT \n        AVG(Difference) AS AvgDiff\n    FROM \n        EnrollmentDifference\n)\nSELECT \n    ed.`School Name`,\n    s.DOCType\nFROM \n    EnrollmentDifference ed\nJOIN \n    AverageDifference ad ON ed.Difference > ad.AvgDiff;",
+    "column_probe": {
+      "alias_map": {
+        "ed": "__cte__enrollmentdifference",
+        "ad": "__cte__averagedifference",
+        "f": "frpm",
+        "s": "schools",
+        "enrollmentdifference": "__cte__enrollmentdifference"
+      },
+      "cte_names": [
+        "averagedifference",
+        "enrollmentdifference"
+      ],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 31,
+    "db_id": "california_schools",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT \n    `School Name`, \n    (`Free Meal Count (K-12)` / `Enrollment (K-12)`) AS Eligible_Free_Rate\nFROM \n    frpm\nWHERE \n    `Low Grade` <= '1' AND `High Grade` >= '12'\nORDER BY \n    `Enrollment (K-12)` DESC\nLIMIT 2 OFFSET 9;",
+    "column_probe": {
+      "alias_map": {
+        "frpm": "frpm"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 32,
+    "db_id": "california_schools",
+    "difficulty": "moderate",
+    "error_type": "Syntax Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT \n    s.SchoolName,\n    (f.`FRPM Count (K-12)` / f.`Enrollment (K-12)`) AS EligibleMealRate\nFROM \n    frpm f\nJOIN \n    schools s ON f.CDSCode = s.CDSCode\nWHERE \n    s.Charter = 66 \n    AND f.`Low Grade` <= '1' \n    AND f.`High Grade` >= '12'\nORDER BY \n    f.`Free Meal Count (K-12)` DESC\nLIMIT 5;",
+    "column_probe": {
+      "alias_map": {
+        "f": "frpm",
+        "s": "schools"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [
+        {
+          "qualifier": "s",
+          "resolved_table": "schools",
+          "column": "schoolname",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [],
+          "exec_probe": true,
+          "exec_message": "ok"
+        }
+      ],
+      "unresolved_refs": [],
+      "has_invalid_ref": true,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 37,
+    "db_id": "california_schools",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT s.Street, s.City, s.Zip, s.State\nFROM schools s\nJOIN satscores sa ON s.CDSCode = sa.cds\nWHERE sa.NumTstTakr > 0\nORDER BY (sa.NumGE1500 * 1.0 / sa.NumTstTakr) ASC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "s": "schools",
+        "sa": "satscores"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 36,
+    "db_id": "california_schools",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT s.AdmFName1 || ' ' || s.AdmLName1 AS FullName\nFROM schools s\nJOIN satscores sa ON s.CDSCode = sa.cds\nWHERE sa.NumGE1500 = (\n    SELECT MAX(NumGE1500)\n    FROM satscores\n)",
+    "column_probe": {
+      "alias_map": {
+        "s": "schools",
+        "sa": "satscores",
+        "satscores": "satscores"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 39,
+    "db_id": "california_schools",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (COLUMN_SELECT, LOGIC_STRUCT)",
+    "pred_sql": "SELECT AVG(s.NumTstTakr) AS AverageTestTakers\nFROM schools sch\nJOIN satscores s ON sch.CDSCode = s.cds\nWHERE sch.City = 'Fresno' \nAND sch.OpenDate BETWEEN '1980-01-01' AND '1980-12-31';",
+    "column_probe": {
+      "alias_map": {
+        "sch": "schools",
+        "s": "satscores"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 40,
+    "db_id": "california_schools",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT s.Phone\nFROM schools s\nJOIN satscores sa ON s.CDSCode = sa.cds\nWHERE s.District = 'Fresno Unified'\nORDER BY sa.AvgScrRead ASC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "s": "schools",
+        "sa": "satscores"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 41,
+    "db_id": "california_schools",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "WITH RankedSchools AS (\n    SELECT \n        s.School AS SchoolName,\n        s.County AS CountyName,\n        sa.AvgScrRead,\n        ROW_NUMBER() OVER (PARTITION BY s.County ORDER BY sa.AvgScrRead DESC) AS Rank\n    FROM \n        schools s\n    JOIN \n        satscores sa ON s.CDSCode = sa.cds\n    WHERE \n        s.Virtual = 'F'\n)\nSELECT \n    SchoolName, \n    CountyName\nFROM \n    RankedSchools\nWHERE \n    Rank <= 5;",
+    "column_probe": {
+      "alias_map": {
+        "rankedschools": "__cte__rankedschools",
+        "s": "schools",
+        "sa": "satscores"
+      },
+      "cte_names": [
+        "rankedschools"
+      ],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 45,
+    "db_id": "california_schools",
+    "difficulty": "moderate",
+    "error_type": "Syntax Error",
+    "manual_label": "SYNTAX",
+    "pred_sql": "SELECT s.School AS School_Name, AVG(sa.AvgScrWrite) AS Average_Writing_Score\nFROM schools s\nJOIN frpm f ON s.CDSCode = f.CDSCode\nJOIN satscores sa ON s.CDSCode = sa.cds\nWHERE f.AdmFName1 = 'Ricci' AND f.AdmLName1 = 'Ulrich'\nGROUP BY s.School;",
+    "column_probe": {
+      "alias_map": {
+        "s": "schools",
+        "f": "frpm",
+        "sa": "satscores"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [
+        {
+          "qualifier": "f",
+          "resolved_table": "frpm",
+          "column": "admfname1",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [
+            "schools"
+          ],
+          "exec_probe": true,
+          "exec_message": "ok"
+        },
+        {
+          "qualifier": "f",
+          "resolved_table": "frpm",
+          "column": "admlname1",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [
+            "schools"
+          ],
+          "exec_probe": true,
+          "exec_message": "ok"
+        }
+      ],
+      "unresolved_refs": [],
+      "has_invalid_ref": true,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 46,
+    "db_id": "california_schools",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT s.State, s.School, SUM(f.`Enrollment (K-12)`) AS Total_Enrollment\nFROM frpm f\nJOIN schools s ON f.CDSCode = s.CDSCode\nWHERE s.DOC = '31' AND f.`Low Grade` >= '1' AND f.`High Grade` <= '12'\nGROUP BY s.State, s.School\nORDER BY Total_Enrollment DESC;",
+    "column_probe": {
+      "alias_map": {
+        "f": "frpm",
+        "s": "schools"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 47,
+    "db_id": "california_schools",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT AVG(monthly_opened) AS monthly_average\nFROM (\n    SELECT strftime('%m', OpenDate) AS month, COUNT(*) AS monthly_opened\n    FROM schools\n    WHERE DOC = 52 AND strftime('%Y', OpenDate) = '1980'\n    GROUP BY month\n);",
+    "column_probe": {
+      "alias_map": {
+        "schools": "schools"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 48,
+    "db_id": "california_schools",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT \n    (SELECT COUNT(*) FROM schools WHERE DOC = '54' AND County = 'Orange') * 1.0 /\n    (SELECT COUNT(*) FROM schools WHERE DOC = '52' AND County = 'Orange') AS ratio",
+    "column_probe": {
+      "alias_map": {
+        "schools": "schools"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 50,
+    "db_id": "california_schools",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT s.School AS School_Name, s.Street || ', ' || s.City || ', ' || s.Zip AS Postal_Street_Address\nFROM satscores sa\nJOIN schools s ON sa.cds = s.CDSCode\nORDER BY sa.AvgScrMath DESC\nLIMIT 1 OFFSET 6;",
+    "column_probe": {
+      "alias_map": {
+        "sa": "satscores",
+        "s": "schools"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 62,
+    "db_id": "california_schools",
+    "difficulty": "challenging",
+    "error_type": "Syntax Error",
+    "manual_label": "COMPLEX (AGG_LOGIC, COLUMN_SELECT)",
+    "pred_sql": "SELECT COUNT(*) AS TotalNonCharteredSchools\nFROM frpm\nJOIN schools ON frpm.CDSCode = schools.CDSCode\nWHERE schools.Charter = 0\nAND frpm.`Percent (%) Eligible Free (K-12)` < 0.18\nAND frpm.County Name = 'Los Angeles';",
+    "column_probe": {
+      "alias_map": {
+        "frpm": "frpm",
+        "schools": "schools"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [
+        {
+          "qualifier": "frpm",
+          "resolved_table": "frpm",
+          "column": "county",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [
+            "schools"
+          ],
+          "exec_probe": true,
+          "exec_message": "ok"
+        }
+      ],
+      "unresolved_refs": [],
+      "has_invalid_ref": true,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 72,
+    "db_id": "california_schools",
+    "difficulty": "moderate",
+    "error_type": "Syntax Error",
+    "manual_label": "COMPLEX (COLUMN_SELECT, LOGIC_STRUCT)",
+    "pred_sql": "SELECT SUM(`Enrollment (Ages 5-17)`) AS total_students\nFROM frpm\nWHERE `School Name` = 'State Special School'\n  AND `Academic Year` = '2014-2015'\n  AND EdOpsCode = 'SSS';",
+    "column_probe": {
+      "alias_map": {
+        "frpm": "frpm"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 77,
+    "db_id": "california_schools",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT s.School AS School_Name, \n       (f.\"FRPM Count (Ages 5-17)\" / f.\"Enrollment (Ages 5-17)\" * 100) AS \"Percent (%) Eligible FRPM (Ages 5-17)\"\nFROM frpm f\nJOIN schools s ON f.CDSCode = s.CDSCode\nWHERE s.County = 'Los Angeles' \n  AND f.\"Low Grade\" = 'K' \n  AND f.\"High Grade\" = '9';",
+    "column_probe": {
+      "alias_map": {
+        "f": "frpm",
+        "s": "schools"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 82,
+    "db_id": "california_schools",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT GSoffered \nFROM schools \nWHERE Longitude = (SELECT MAX(Longitude) FROM schools);",
+    "column_probe": {
+      "alias_map": {
+        "schools": "schools"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 85,
+    "db_id": "california_schools",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT f.`District Code`\nFROM frpm f\nJOIN schools s ON f.CDSCode = s.CDSCode\nWHERE s.AdmFName1 = 'Alusine'\nAND f.`Enrollment (K-12)` > 0\nAND f.`Percent (%) Eligible Free (K-12)` IS NOT NULL;",
+    "column_probe": {
+      "alias_map": {
+        "f": "frpm",
+        "s": "schools"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 87,
+    "db_id": "california_schools",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "SYNTAX",
+    "pred_sql": "SELECT DISTINCT AdmEmail1 AS Email\nFROM schools\nWHERE County = 'San Bernardino'\n  AND City = 'San Bernardino'\n  AND OpenDate BETWEEN '2009-01-01' AND '2010-12-31'\n  AND (SOC = '62' OR DOC = '54');",
+    "column_probe": {
+      "alias_map": {
+        "schools": "schools"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 89,
+    "db_id": "financial",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (VALUE_FORMAT, COLUMN_SELECT)",
+    "pred_sql": "SELECT COUNT(DISTINCT a.account_id) AS account_count\nFROM account a\nJOIN disp d ON a.account_id = d.account_id\nJOIN client c ON d.client_id = c.client_id\nJOIN district di ON c.district_id = di.district_id\nJOIN trans t ON a.account_id = t.account_id\nWHERE di.A3 = 'East Bohemia' AND t.type = 'POPLATEK PO OBRATU';",
+    "column_probe": {
+      "alias_map": {
+        "a": "account",
+        "d": "disp",
+        "c": "client",
+        "di": "district",
+        "t": "trans"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 93,
+    "db_id": "financial",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "VALUE_FORMAT",
+    "pred_sql": "SELECT COUNT(*) \nFROM client c\nJOIN district d ON c.district_id = d.district_id\nWHERE c.gender = 'M' \nAND d.A3 = 'North Bohemia' \nAND d.A11 > 8000;",
+    "column_probe": {
+      "alias_map": {
+        "c": "client",
+        "d": "district"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 94,
+    "db_id": "financial",
+    "difficulty": "challenging",
+    "error_type": "Syntax Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "WITH SalaryStats AS (\n    SELECT \n        d.A11 AS average_salary,\n        c.client_id,\n        c.gender,\n        c.birth_date,\n        a.account_id\n    FROM \n        client c\n    JOIN \n        disp d ON c.client_id = d.client_id\n    JOIN \n        account a ON d.account_id = a.account_id\n    WHERE \n        c.gender = 'F'\n),\nOldestFemale AS (\n    SELECT \n        client_id,\n        MIN(birth_date) AS oldest_birth_date\n    FROM \n        SalaryStats\n    GROUP BY \n        client_id\n),\nLowestAvgSalary AS (\n    SELECT \n        MIN(average_salary) AS lowest_salary\n    FROM \n        SalaryStats\n    WHERE \n        client_id IN (SELECT client_id FROM OldestFemale)\n),\nHighestAvgSalary AS (\n    SELECT \n        MAX(average_salary) AS highest_salary\n    FROM \n        SalaryStats\n)\nSELECT \n    a.account_id,\n    (h.highest_salary - l.lowest_salary) AS salary_gap\nFROM \n    LowestAvgSalary l,\n    HighestAvgSalary h,\n    SalaryStats a\nWHERE \n    a.average_salary = l.lowest_salary;",
+    "column_probe": {
+      "alias_map": {
+        "l": "__cte__lowestavgsalary",
+        "h": "__cte__highestavgsalary",
+        "a": "account",
+        "c": "client",
+        "d": "disp",
+        "salarystats": "__cte__salarystats",
+        "oldestfemale": "__cte__oldestfemale"
+      },
+      "cte_names": [
+        "salarystats",
+        "highestavgsalary",
+        "oldestfemale",
+        "lowestavgsalary"
+      ],
+      "subquery_aliases": [],
+      "invalid_refs": [
+        {
+          "qualifier": "a",
+          "resolved_table": "account",
+          "column": "average_salary",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [],
+          "exec_probe": true,
+          "exec_message": "ok"
+        },
+        {
+          "qualifier": "d",
+          "resolved_table": "disp",
+          "column": "a11",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [
+            "district"
+          ],
+          "exec_probe": true,
+          "exec_message": "ok"
+        }
+      ],
+      "unresolved_refs": [],
+      "has_invalid_ref": true,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 95,
+    "db_id": "financial",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT d.account_id\nFROM disp d\nJOIN client c ON d.client_id = c.client_id\nJOIN district di ON c.district_id = di.district_id\nWHERE c.birth_date = (SELECT MIN(birth_date) FROM client)\nAND di.A11 = (SELECT MAX(A11) FROM district);",
+    "column_probe": {
+      "alias_map": {
+        "d": "disp",
+        "c": "client",
+        "di": "district",
+        "client": "client",
+        "district": "district"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 98,
+    "db_id": "financial",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT a.account_id, l.amount\nFROM account a\nJOIN loan l ON a.account_id = l.account_id\nWHERE strftime('%Y', l.date) = '1997'\nAND a.frequency = 'POPLATEK TYDNE'\nORDER BY l.amount ASC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "a": "account",
+        "l": "loan"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 99,
+    "db_id": "financial",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (COLUMN_SELECT, LOGIC_STRUCT)",
+    "pred_sql": "SELECT a.account_id, MAX(l.amount) AS highest_approved_amount\nFROM account a\nJOIN loan l ON a.account_id = l.account_id\nWHERE l.duration > 12 AND strftime('%Y', a.date) = '1993'\nGROUP BY a.account_id\nORDER BY highest_approved_amount DESC\nLIMIT 1;",
+    "column_probe": {
+      "alias_map": {
+        "a": "account",
+        "l": "loan"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 115,
+    "db_id": "financial",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COMPLEX (VALUE_FORMAT, LOGIC_STRUCT)",
+    "pred_sql": "WITH SouthBohemiaDistrict AS (\n    SELECT district_id\n    FROM district\n    WHERE A3 = 'South Bohemia'\n    ORDER BY A4 DESC\n    LIMIT 1\n),\nClientCounts AS (\n    SELECT \n        COUNT(*) AS total_clients,\n        SUM(CASE WHEN gender = 'M' THEN 1 ELSE 0 END) AS male_clients\n    FROM client\n    WHERE district_id IN (SELECT district_id FROM SouthBohemiaDistrict)\n)\nSELECT \n    (male_clients * 100.0 / total_clients) AS male_percentage\nFROM ClientCounts;",
+    "column_probe": {
+      "alias_map": {
+        "clientcounts": "__cte__clientcounts",
+        "district": "district",
+        "client": "client",
+        "southbohemiadistrict": "__cte__southbohemiadistrict"
+      },
+      "cte_names": [
+        "clientcounts",
+        "southbohemiadistrict"
+      ],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 125,
+    "db_id": "financial",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT d.A2 AS district, d.A3 AS state, \n       ((d.A13 - d.A12) / d.A12) * 100 AS unemployment_rate_increment\nFROM loan l\nJOIN account a ON l.account_id = a.account_id\nJOIN client c ON a.account_id = c.district_id\nJOIN district d ON c.district_id = d.district_id\nWHERE l.status = 'D' \n  AND l.date <= DATE('now', 'localtime')\n  AND l.date >= '1995-01-01' \n  AND l.date < '1997-01-01';",
+    "column_probe": {
+      "alias_map": {
+        "l": "loan",
+        "a": "account",
+        "c": "client",
+        "d": "district"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 128,
+    "db_id": "financial",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": null,
+    "pred_sql": "SELECT d.A2 AS district, COUNT(c.client_id) AS female_account_holders\nFROM client c\nJOIN account a ON c.client_id = a.account_id\nJOIN district d ON c.district_id = d.district_id\nWHERE c.gender = 'F'\nGROUP BY d.district_id\nORDER BY female_account_holders DESC\nLIMIT 9;",
+    "column_probe": {
+      "alias_map": {
+        "c": "client",
+        "a": "account",
+        "d": "district"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 136,
+    "db_id": "financial",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "VALUE_FORMAT",
+    "pred_sql": "SELECT COUNT(*) AS approved_loans\nFROM loan\nJOIN account ON loan.account_id = account.account_id\nWHERE loan.amount >= 250000\nAND account.frequency = 'POPLATEK MESICNE'\nAND loan.date BETWEEN '1995-01-01' AND '1997-12-31'\nAND loan.status = 'approved';",
+    "column_probe": {
+      "alias_map": {
+        "loan": "loan",
+        "account": "account"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 129,
+    "db_id": "financial",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT d.A2 AS district_name, SUM(t.amount) AS total_withdrawal\nFROM trans t\nJOIN account a ON t.account_id = a.account_id\nJOIN district d ON a.district_id = d.district_id\nWHERE t.type = 'VYDAJ' AND t.date LIKE '1996-01%'\nGROUP BY d.A2\nORDER BY total_withdrawal DESC\nLIMIT 10;",
+    "column_probe": {
+      "alias_map": {
+        "t": "trans",
+        "a": "account",
+        "d": "district"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 145,
+    "db_id": "financial",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT DISTINCT t.account_id\nFROM trans t\nWHERE t.type = 'VYBER KARTOU' \n  AND t.date BETWEEN '1998-01-01' AND '1998-12-31'\n  AND t.amount < (SELECT AVG(amount) \n                  FROM trans \n                  WHERE type = 'VYBER KARTOU' \n                    AND date BETWEEN '1998-01-01' AND '1998-12-31');",
+    "column_probe": {
+      "alias_map": {
+        "t": "trans",
+        "trans": "trans"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 149,
+    "db_id": "financial",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT DISTINCT d.A2 AS account_type\nFROM account a\nJOIN disp d ON a.account_id = d.account_id\nJOIN district d ON a.district_id = d.district_id\nWHERE d.A11 > 8000 AND d.A11 <= 9000\nAND d.type != 'OWNER'\nAND a.account_id NOT IN (SELECT account_id FROM loan);",
+    "column_probe": {
+      "alias_map": {
+        "a": "account",
+        "d": "district",
+        "loan": "loan"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [
+        {
+          "qualifier": "d",
+          "resolved_table": "district",
+          "column": "account_id",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [
+            "account",
+            "disp",
+            "loan",
+            "order",
+            "trans"
+          ],
+          "exec_probe": true,
+          "exec_message": "ok"
+        },
+        {
+          "qualifier": "d",
+          "resolved_table": "district",
+          "column": "type",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [
+            "card",
+            "disp",
+            "trans"
+          ],
+          "exec_probe": true,
+          "exec_message": "ok"
+        }
+      ],
+      "unresolved_refs": [],
+      "has_invalid_ref": true,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 159,
+    "db_id": "financial",
+    "difficulty": "simple",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT *\nFROM trans\nWHERE account_id IN (\n    SELECT account_id\n    FROM disp\n    WHERE client_id = 3356\n) AND operation = 'VYBER';",
+    "column_probe": {
+      "alias_map": {
+        "trans": "trans",
+        "disp": "disp"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 168,
+    "db_id": "financial",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "JOIN_PATH",
+    "pred_sql": "SELECT \n    (COUNT(CASE WHEN c.gender = 'F' THEN 1 END) * 100.0 / COUNT(*)) AS percentage_women\nFROM \n    account a\nJOIN \n    client c ON a.account_id = (SELECT d.account_id FROM disp d WHERE d.client_id = c.client_id)\nJOIN \n    district d ON a.district_id = d.district_id\nWHERE \n    d.A11 > 10000;",
+    "column_probe": {
+      "alias_map": {
+        "a": "account",
+        "c": "client",
+        "d": "disp"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [
+        {
+          "qualifier": "d",
+          "resolved_table": "disp",
+          "column": "district_id",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [
+            "account",
+            "client",
+            "district"
+          ],
+          "exec_probe": true,
+          "exec_message": "ok"
+        },
+        {
+          "qualifier": "d",
+          "resolved_table": "disp",
+          "column": "a11",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [
+            "district"
+          ],
+          "exec_probe": true,
+          "exec_message": "ok"
+        }
+      ],
+      "unresolved_refs": [],
+      "has_invalid_ref": true,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 169,
+    "db_id": "financial",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT \n    ((SUM(CASE WHEN l.date BETWEEN '1997-01-01' AND '1997-12-31' THEN l.amount ELSE 0 END) - \n      SUM(CASE WHEN l.date BETWEEN '1996-01-01' AND '1996-12-31' THEN l.amount ELSE 0 END)) / \n      NULLIF(SUM(CASE WHEN l.date BETWEEN '1996-01-01' AND '1996-12-31' THEN l.amount ELSE 0 END), 0)) * 100 AS growth_rate\nFROM \n    loan l\nJOIN \n    account a ON l.account_id = a.account_id\nJOIN \n    disp d ON a.account_id = d.account_id\nJOIN \n    client c ON d.client_id = c.client_id\nWHERE \n    c.gender = 'M';",
+    "column_probe": {
+      "alias_map": {
+        "l": "loan",
+        "a": "account",
+        "d": "disp",
+        "c": "client"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 173,
+    "db_id": "financial",
+    "difficulty": "challenging",
+    "error_type": "Semantic Error",
+    "manual_label": "COLUMN_SELECT",
+    "pred_sql": "SELECT \n    (SELECT COUNT(*) FROM trans WHERE account_id = 3 AND type = 'statement') AS statement_requests,\n    (SELECT SUM(amount) FROM trans WHERE account_id = 3 AND k_symbol = '3539') AS total_debit_aim",
+    "column_probe": {
+      "alias_map": {
+        "trans": "trans"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 186,
+    "db_id": "financial",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "JOIN_PATH",
+    "pred_sql": "SELECT \n    (COUNT(CASE WHEN c.gender = 'M' THEN 1 END) * 100.0 / COUNT(*)) AS percentage_male_clients\nFROM \n    client c\nJOIN \n    disp d ON c.client_id = d.client_id\nJOIN \n    account a ON d.account_id = a.account_id\nWHERE \n    a.frequency = 'POPLATEK TYDNE';",
+    "column_probe": {
+      "alias_map": {
+        "c": "client",
+        "d": "disp",
+        "a": "account"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 192,
+    "db_id": "financial",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT AVG(l.amount) AS average_loan_amount\nFROM loan l\nJOIN trans t ON l.account_id = t.account_id\nWHERE l.status IN ('C', 'D') \nAND t.operation = 'POPLATEK PO OBRATU'",
+    "column_probe": {
+      "alias_map": {
+        "l": "loan",
+        "t": "trans"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 119,
+    "db_id": "financial",
+    "difficulty": "moderate",
+    "error_type": "Syntax Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT a.account_id, d.A2 AS district_name, d.A3 AS district_region\nFROM account a\nJOIN district d ON a.district_id = d.district_id\nJOIN trans t ON a.account_id = t.account_id\nJOIN card c ON a.account_id = c.account_id\nWHERE strftime('%Y', a.date) = '1993' \nAND c.type = 'POPLATEK PO OBRATU' \nAND c.issued > t.date;",
+    "column_probe": {
+      "alias_map": {
+        "a": "account",
+        "d": "district",
+        "t": "trans",
+        "c": "card"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [
+        {
+          "qualifier": "c",
+          "resolved_table": "card",
+          "column": "account_id",
+          "issue": "column_not_in_resolved_table",
+          "candidate_tables": [
+            "account",
+            "disp",
+            "loan",
+            "order",
+            "trans"
+          ],
+          "exec_probe": true,
+          "exec_message": "ok"
+        }
+      ],
+      "unresolved_refs": [],
+      "has_invalid_ref": true,
+      "has_unresolved_ref": false
+    }
+  },
+  {
+    "question_id": 120,
+    "db_id": "financial",
+    "difficulty": "moderate",
+    "error_type": "Semantic Error",
+    "manual_label": "LOGIC_STRUCT",
+    "pred_sql": "SELECT a.account_id, a.frequency\nFROM account a\nJOIN disp d ON a.account_id = d.account_id\nJOIN client c ON d.client_id = c.client_id\nJOIN district dis ON c.district_id = dis.district_id\nWHERE dis.A2 = 'east Bohemia' \nAND a.date BETWEEN '1995-01-01' AND '2000-12-31';",
+    "column_probe": {
+      "alias_map": {
+        "a": "account",
+        "d": "disp",
+        "c": "client",
+        "dis": "district"
+      },
+      "cte_names": [],
+      "subquery_aliases": [],
+      "invalid_refs": [],
+      "unresolved_refs": [],
+      "has_invalid_ref": false,
+      "has_unresolved_ref": false
+    }
+  }
+]

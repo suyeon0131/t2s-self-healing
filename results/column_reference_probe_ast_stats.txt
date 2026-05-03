@@ -1,0 +1,30 @@
+=================================================================
+📊 sqlglot AST Column Reference Probe 통계
+=================================================================
+전체: 262건
+파싱 오류: 1건
+invalid ref 있음: 21건 (8.0%)
+unresolved qualifier 있음: 0건 (0.0%)
+candidate_tables 있음: 19건
+
+수작업 라벨별 invalid_ref 발생률:
+  라벨                       전체  invalid       비율   unresolved
+  ----------------------------------------------------------
+  COLUMN_SELECT            86        8     9.3%            0
+  LOGIC_STRUCT             64        3     4.7%            0
+  JOIN_PATH                35        5    14.3%            0
+  unknown                  29        1     3.4%            0
+  VALUE_FORMAT             23        0     0.0%            0
+  AGG_LOGIC                11        2    18.2%            0
+  CASE_LOGIC                5        0     0.0%            0
+  SYNTAX                    5        2    40.0%            0
+  DOMAIN                    4        0     0.0%            0
+
+invalid ref issue 유형:
+  column_not_in_resolved_table: 27건
+
+=== 기존 정규식 대비 비교 ===
+  기존 invalid: 19건 (7.3%) → AST: 21건 (8.0%)
+  기존 unresolved: 23건 (8.8%) → AST: 0건 (0.0%)
+  기존 false_alias_parse 20건 → AST에서 제거됨 (예상)
+=================================================================
