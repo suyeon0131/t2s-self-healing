@@ -1,0 +1,709 @@
+[
+  {
+    "question_id": 1251,
+    "db_id": "thrombosis_prediction",
+    "manual_label": "COMPLEX (JOIN_PATH, VALUE_FORMAT)",
+    "difficulty": "simple",
+    "pred_sql": "SELECT COUNT(DISTINCT p.ID) AS PatientCount\nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nWHERE e.IGG >= 2000;",
+    "gold_sql": "SELECT COUNT(DISTINCT T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID INNER JOIN Examination AS T3 ON T3.ID = T2.ID WHERE T2.IGG >= 2000",
+    "invalid_refs": [
+      {
+        "qualifier": "e",
+        "resolved_table": "Examination",
+        "column": "IGG",
+        "issue": "column_not_in_resolved_table",
+        "candidate_tables": [
+          "Laboratory"
+        ]
+      }
+    ],
+    "candidates_tried": 1,
+    "needs_join_insertion": [
+      {
+        "qualifier": "e",
+        "column": "IGG",
+        "resolved_table": "Examination",
+        "candidate_table": "Laboratory",
+        "reason": "candidate_table_not_in_sql"
+      }
+    ],
+    "trials": [
+      {
+        "description": "join_insert:Laboratory via patient.ID=Laboratory.ID, e.IGG→l.IGG",
+        "strategy": "join_insertion",
+        "candidate_sql": "SELECT COUNT(DISTINCT p.ID) AS PatientCount\nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nJOIN [Laboratory] l ON p.ID = l.ID\nWHERE l.IGG >= 2000",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": true
+      }
+    ],
+    "repaired": true,
+    "repair_sql": "SELECT COUNT(DISTINCT p.ID) AS PatientCount\nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nJOIN [Laboratory] l ON p.ID = l.ID\nWHERE l.IGG >= 2000",
+    "repair_description": "join_insert:Laboratory via patient.ID=Laboratory.ID, e.IGG→l.IGG"
+  },
+  {
+    "question_id": 1254,
+    "db_id": "thrombosis_prediction",
+    "manual_label": "COMPLEX (JOIN_PATH, COLUMN_SELECT)",
+    "difficulty": "moderate",
+    "pred_sql": "SELECT COUNT(*) \nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nWHERE e.IGA > 80 AND e.IGA < 500 \nAND p.`First Date` >= '1990-01-01';",
+    "gold_sql": "SELECT COUNT(T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.IGA BETWEEN 80 AND 500 AND  strftime('%Y',  T1.`First Date`) > '1990'",
+    "invalid_refs": [
+      {
+        "qualifier": "e",
+        "resolved_table": "Examination",
+        "column": "IGA",
+        "issue": "column_not_in_resolved_table",
+        "candidate_tables": [
+          "Laboratory"
+        ]
+      },
+      {
+        "qualifier": "e",
+        "resolved_table": "Examination",
+        "column": "IGA",
+        "issue": "column_not_in_resolved_table",
+        "candidate_tables": [
+          "Laboratory"
+        ]
+      }
+    ],
+    "candidates_tried": 1,
+    "needs_join_insertion": [
+      {
+        "qualifier": "e",
+        "column": "IGA",
+        "resolved_table": "Examination",
+        "candidate_table": "Laboratory",
+        "reason": "candidate_table_not_in_sql"
+      },
+      {
+        "qualifier": "e",
+        "column": "IGA",
+        "resolved_table": "Examination",
+        "candidate_table": "Laboratory",
+        "reason": "candidate_table_not_in_sql"
+      }
+    ],
+    "trials": [
+      {
+        "description": "join_insert:Laboratory via patient.ID=Laboratory.ID, e.IGA→l.IGA",
+        "strategy": "join_insertion",
+        "candidate_sql": "SELECT COUNT(*) \nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nJOIN [Laboratory] l ON p.ID = l.ID\nWHERE l.IGA > 80 AND l.IGA < 500 \nAND p.`First Date` >= '1990-01-01'",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      }
+    ],
+    "repaired": false,
+    "repair_sql": null,
+    "repair_description": null
+  },
+  {
+    "question_id": 1270,
+    "db_id": "thrombosis_prediction",
+    "manual_label": null,
+    "difficulty": "challenging",
+    "pred_sql": "SELECT COUNT(DISTINCT p.ID) AS FemalePatientsWithoutSymptoms\nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nWHERE p.SEX = 'F' \n  AND e.SC170 IN ('negative', '0') \n  AND e.Symptoms IS NULL;",
+    "gold_sql": "SELECT COUNT(DISTINCT T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID INNER JOIN Examination AS T3 ON T3.ID = T2.ID WHERE (T2.SC170 = 'negative' OR T2.SC170 = '0') AND T1.SEX = 'F' AND T3.Symptoms IS NULL",
+    "invalid_refs": [
+      {
+        "qualifier": "e",
+        "resolved_table": "Examination",
+        "column": "SC170",
+        "issue": "column_not_in_resolved_table",
+        "candidate_tables": [
+          "Laboratory"
+        ]
+      }
+    ],
+    "candidates_tried": 1,
+    "needs_join_insertion": [
+      {
+        "qualifier": "e",
+        "column": "SC170",
+        "resolved_table": "Examination",
+        "candidate_table": "Laboratory",
+        "reason": "candidate_table_not_in_sql"
+      }
+    ],
+    "trials": [
+      {
+        "description": "join_insert:Laboratory via patient.ID=Laboratory.ID, e.SC170→l.SC170",
+        "strategy": "join_insertion",
+        "candidate_sql": "SELECT COUNT(DISTINCT p.ID) AS FemalePatientsWithoutSymptoms\nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nJOIN [Laboratory] l ON p.ID = l.ID\nWHERE p.SEX = 'F' \n  AND l.SC170 IN ('negative', '0') \n  AND e.Symptoms IS NULL",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": true
+      }
+    ],
+    "repaired": true,
+    "repair_sql": "SELECT COUNT(DISTINCT p.ID) AS FemalePatientsWithoutSymptoms\nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nJOIN [Laboratory] l ON p.ID = l.ID\nWHERE p.SEX = 'F' \n  AND l.SC170 IN ('negative', '0') \n  AND e.Symptoms IS NULL",
+    "repair_description": "join_insert:Laboratory via patient.ID=Laboratory.ID, e.SC170→l.SC170"
+  },
+  {
+    "question_id": 1302,
+    "db_id": "thrombosis_prediction",
+    "manual_label": "LOGIC_STRUCT",
+    "difficulty": "challenging",
+    "pred_sql": "SELECT COUNT(DISTINCT p.ID) AS PositiveCoagulationCount\nFROM Patient p\nJOIN Laboratory l ON p.ID = l.ID\nWHERE l.CPK < 250 \nAND (l.KCT = '+' OR l.RVVT = '+' OR l.LAC = '+');",
+    "gold_sql": "SELECT COUNT(T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID INNER JOIN Examination AS T3 ON T1.ID = T3.ID WHERE T2.CPK < 250 AND (T3.KCT = '+' OR T3.RVVT = '+' OR T3.LAC = '+')",
+    "invalid_refs": [
+      {
+        "qualifier": "l",
+        "resolved_table": "Laboratory",
+        "column": "KCT",
+        "issue": "column_not_in_resolved_table",
+        "candidate_tables": [
+          "Examination"
+        ]
+      },
+      {
+        "qualifier": "l",
+        "resolved_table": "Laboratory",
+        "column": "RVVT",
+        "issue": "column_not_in_resolved_table",
+        "candidate_tables": [
+          "Examination"
+        ]
+      },
+      {
+        "qualifier": "l",
+        "resolved_table": "Laboratory",
+        "column": "LAC",
+        "issue": "column_not_in_resolved_table",
+        "candidate_tables": [
+          "Examination"
+        ]
+      }
+    ],
+    "candidates_tried": 3,
+    "needs_join_insertion": [
+      {
+        "qualifier": "l",
+        "column": "KCT",
+        "resolved_table": "Laboratory",
+        "candidate_table": "Examination",
+        "reason": "candidate_table_not_in_sql"
+      },
+      {
+        "qualifier": "l",
+        "column": "RVVT",
+        "resolved_table": "Laboratory",
+        "candidate_table": "Examination",
+        "reason": "candidate_table_not_in_sql"
+      },
+      {
+        "qualifier": "l",
+        "column": "LAC",
+        "resolved_table": "Laboratory",
+        "candidate_table": "Examination",
+        "reason": "candidate_table_not_in_sql"
+      }
+    ],
+    "trials": [
+      {
+        "description": "join_insert:Examination via patient.ID=Examination.ID, l.KCT→a.KCT",
+        "strategy": "join_insertion",
+        "candidate_sql": "SELECT COUNT(DISTINCT p.ID) AS PositiveCoagulationCount\nFROM Patient p\nJOIN Laboratory l ON p.ID = l.ID\nJOIN [Examination] a ON p.ID = a.ID\nWHERE l.CPK < 250 \nAND (a.KCT = '+' OR l.RVVT = '+' OR l.LAC = '+')",
+        "exec_success": false,
+        "exec_error": "no such column: l.RVVT",
+        "row_count": 0,
+        "ex_pass": false
+      },
+      {
+        "description": "join_insert:Examination via patient.ID=Examination.ID, l.RVVT→a.RVVT",
+        "strategy": "join_insertion",
+        "candidate_sql": "SELECT COUNT(DISTINCT p.ID) AS PositiveCoagulationCount\nFROM Patient p\nJOIN Laboratory l ON p.ID = l.ID\nJOIN [Examination] a ON p.ID = a.ID\nWHERE l.CPK < 250 \nAND (l.KCT = '+' OR a.RVVT = '+' OR l.LAC = '+')",
+        "exec_success": false,
+        "exec_error": "no such column: l.KCT",
+        "row_count": 0,
+        "ex_pass": false
+      },
+      {
+        "description": "join_insert:Examination via patient.ID=Examination.ID, l.LAC→a.LAC",
+        "strategy": "join_insertion",
+        "candidate_sql": "SELECT COUNT(DISTINCT p.ID) AS PositiveCoagulationCount\nFROM Patient p\nJOIN Laboratory l ON p.ID = l.ID\nJOIN [Examination] a ON p.ID = a.ID\nWHERE l.CPK < 250 \nAND (l.KCT = '+' OR l.RVVT = '+' OR a.LAC = '+')",
+        "exec_success": false,
+        "exec_error": "no such column: l.KCT",
+        "row_count": 0,
+        "ex_pass": false
+      }
+    ],
+    "repaired": false,
+    "repair_sql": null,
+    "repair_description": null
+  },
+  {
+    "question_id": 1037,
+    "db_id": "european_football_2",
+    "manual_label": "JOIN_PATH",
+    "difficulty": "challenging",
+    "pred_sql": "SELECT \n    (SUM(CASE WHEN p.preferred_foot = 'left' THEN 1 ELSE 0 END) * 100.0) / COUNT(p.player_fifa_api_id) AS percentage_left_foot\nFROM \n    Player p\nWHERE \n    strftime('%Y', p.birthday) BETWEEN '1987' AND '1992';",
+    "gold_sql": "SELECT CAST(COUNT(CASE WHEN t2.preferred_foot = 'left' THEN t1.id ELSE NULL END) AS REAL) * 100 / COUNT(t1.id) percent FROM Player AS t1 INNER JOIN Player_Attributes AS t2 ON t1.player_api_id = t2.player_api_id WHERE SUBSTR(t1.birthday, 1, 4) BETWEEN '1987' AND '1992'",
+    "invalid_refs": [
+      {
+        "qualifier": "p",
+        "resolved_table": "Player",
+        "column": "preferred_foot",
+        "issue": "column_not_in_resolved_table",
+        "candidate_tables": [
+          "Player_Attributes"
+        ]
+      }
+    ],
+    "candidates_tried": 1,
+    "needs_join_insertion": [
+      {
+        "qualifier": "p",
+        "column": "preferred_foot",
+        "resolved_table": "Player",
+        "candidate_table": "Player_Attributes",
+        "reason": "candidate_table_not_in_sql"
+      }
+    ],
+    "trials": [
+      {
+        "description": "join_insert:Player_Attributes via player.player_api_id=Player_Attributes.player_api_id, p.preferred_foot→l.preferred_foot",
+        "strategy": "join_insertion",
+        "candidate_sql": "SELECT \n    (SUM(CASE WHEN l.preferred_foot = 'left' THEN 1 ELSE 0 END) * 100.0) / COUNT(p.player_fifa_api_id) AS percentage_left_foot\nFROM \n    Player p\nJOIN [Player_Attributes] l ON p.player_api_id = l.player_api_id\nWHERE \n    strftime('%Y', p.birthday) BETWEEN '1987' AND '1992'",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": true
+      }
+    ],
+    "repaired": true,
+    "repair_sql": "SELECT \n    (SUM(CASE WHEN l.preferred_foot = 'left' THEN 1 ELSE 0 END) * 100.0) / COUNT(p.player_fifa_api_id) AS percentage_left_foot\nFROM \n    Player p\nJOIN [Player_Attributes] l ON p.player_api_id = l.player_api_id\nWHERE \n    strftime('%Y', p.birthday) BETWEEN '1987' AND '1992'",
+    "repair_description": "join_insert:Player_Attributes via player.player_api_id=Player_Attributes.player_api_id, p.preferred_foot→l.preferred_foot"
+  },
+  {
+    "question_id": 962,
+    "db_id": "formula_1",
+    "manual_label": "AGG_LOGIC",
+    "difficulty": "challenging",
+    "pred_sql": "SELECT \n    (COUNT(DISTINCT l.driverId) * 100.0 / NULLIF(COUNT(DISTINCT r.driverId), 0)) AS percentage\nFROM \n    results r\nJOIN \n    drivers d ON r.driverId = d.driverId\nJOIN \n    lapTimes l ON r.raceId = l.raceId AND r.driverId = l.driverId\nWHERE \n    d.dob < '1985-01-01' \n    AND r.year BETWEEN 2000 AND 2005 \n    AND l.lap > 50;",
+    "gold_sql": "SELECT CAST(SUM(IIF(STRFTIME('%Y', T3.dob) < '1985' AND T1.laps > 50, 1, 0)) AS REAL) * 100 / COUNT(*) FROM results AS T1 INNER JOIN races AS T2 on T1.raceId = T2.raceId INNER JOIN drivers AS T3 on T1.driverId = T3.driverId WHERE T2.year BETWEEN 2000 AND 2005",
+    "invalid_refs": [
+      {
+        "qualifier": "r",
+        "resolved_table": "results",
+        "column": "year",
+        "issue": "column_not_in_resolved_table",
+        "candidate_tables": [
+          "seasons",
+          "races"
+        ]
+      }
+    ],
+    "candidates_tried": 1,
+    "needs_join_insertion": [
+      {
+        "qualifier": "r",
+        "column": "year",
+        "resolved_table": "results",
+        "candidate_table": "seasons",
+        "reason": "candidate_table_not_in_sql"
+      },
+      {
+        "qualifier": "r",
+        "column": "year",
+        "resolved_table": "results",
+        "candidate_table": "races",
+        "reason": "candidate_table_not_in_sql"
+      }
+    ],
+    "trials": [
+      {
+        "description": "join_insert:races via results.raceId=races.raceId, r.year→a.year",
+        "strategy": "join_insertion",
+        "candidate_sql": "SELECT \n    (COUNT(DISTINCT l.driverId) * 100.0 / NULLIF(COUNT(DISTINCT r.driverId), 0)) AS percentage\nFROM \n    results r\nJOIN \n    drivers d ON r.driverId = d.driverId\nJOIN \n    lapTimes l ON r.raceId = l.raceId AND r.driverId = l.driverId\nJOIN [races] a ON r.raceId = a.raceId\nWHERE \n    d.dob < '1985-01-01' \n    AND a.year BETWEEN 2000 AND 2005 \n    AND l.lap > 50",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      }
+    ],
+    "repaired": false,
+    "repair_sql": null,
+    "repair_description": null
+  },
+  {
+    "question_id": 682,
+    "db_id": "codebase_community",
+    "manual_label": "SYNTAX",
+    "difficulty": "moderate",
+    "pred_sql": "SELECT p.Id, p.OwnerDisplayName\nFROM posts p\nWHERE p.FavoriteCount = (\n    SELECT MAX(FavoriteCount)\n    FROM posts\n    WHERE strftime('%Y', CreationDate) = '2010'\n)\nAND strftime('%Y', p.CreationDate) = '2010';",
+    "gold_sql": "SELECT T2.OwnerUserId, T1.DisplayName FROM users AS T1 INNER JOIN posts AS T2 ON T1.Id = T2.OwnerUserId WHERE STRFTIME('%Y', T1.CreationDate) = '2010' ORDER BY T2.FavoriteCount DESC LIMIT 1",
+    "invalid_refs": [
+      {
+        "qualifier": "p",
+        "resolved_table": "posts",
+        "column": "CreationDate",
+        "issue": "column_not_in_resolved_table",
+        "candidate_tables": [
+          "comments",
+          "postHistory",
+          "postLinks",
+          "users",
+          "votes"
+        ]
+      }
+    ],
+    "candidates_tried": 2,
+    "needs_join_insertion": [
+      {
+        "qualifier": "p",
+        "column": "CreationDate",
+        "resolved_table": "posts",
+        "candidate_table": "comments",
+        "reason": "candidate_table_not_in_sql"
+      },
+      {
+        "qualifier": "p",
+        "column": "CreationDate",
+        "resolved_table": "posts",
+        "candidate_table": "postHistory",
+        "reason": "candidate_table_not_in_sql"
+      }
+    ],
+    "trials": [
+      {
+        "description": "join_insert:comments via posts.Id=comments.PostId, p.CreationDate→l.CreationDate",
+        "strategy": "join_insertion",
+        "candidate_sql": "SELECT p.Id, p.OwnerDisplayName\nFROM posts p\nJOIN [comments] l ON p.Id = l.PostId\nWHERE p.FavoriteCount = (\n    SELECT MAX(FavoriteCount)\n    FROM posts\n    WHERE strftime('%Y', CreationDate) = '2010'\n)\nAND strftime('%Y', l.CreationDate) = '2010'",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 2,
+        "ex_pass": false
+      },
+      {
+        "description": "join_insert:postHistory via posts.Id=postHistory.PostId, p.CreationDate→l.CreationDate",
+        "strategy": "join_insertion",
+        "candidate_sql": "SELECT p.Id, p.OwnerDisplayName\nFROM posts p\nJOIN [postHistory] l ON p.Id = l.PostId\nWHERE p.FavoriteCount = (\n    SELECT MAX(FavoriteCount)\n    FROM posts\n    WHERE strftime('%Y', CreationDate) = '2010'\n)\nAND strftime('%Y', l.CreationDate) = '2010'",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 5,
+        "ex_pass": false
+      }
+    ],
+    "repaired": false,
+    "repair_sql": null,
+    "repair_description": null
+  },
+  {
+    "question_id": 45,
+    "db_id": "california_schools",
+    "manual_label": "SYNTAX",
+    "difficulty": "moderate",
+    "pred_sql": "SELECT s.School AS School_Name, AVG(sa.AvgScrWrite) AS Average_Writing_Score\nFROM schools s\nJOIN frpm f ON s.CDSCode = f.CDSCode\nJOIN satscores sa ON s.CDSCode = sa.cds\nWHERE f.AdmFName1 = 'Ricci' AND f.AdmLName1 = 'Ulrich'\nGROUP BY s.School;",
+    "gold_sql": "SELECT T2.School, T1.AvgScrWrite FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode WHERE T2.AdmFName1 = 'Ricci' AND T2.AdmLName1 = 'Ulrich'",
+    "invalid_refs": [
+      {
+        "qualifier": "f",
+        "resolved_table": "frpm",
+        "column": "AdmFName1",
+        "issue": "column_not_in_resolved_table",
+        "candidate_tables": [
+          "schools"
+        ]
+      },
+      {
+        "qualifier": "f",
+        "resolved_table": "frpm",
+        "column": "AdmLName1",
+        "issue": "column_not_in_resolved_table",
+        "candidate_tables": [
+          "schools"
+        ]
+      }
+    ],
+    "candidates_tried": 2,
+    "needs_join_insertion": [],
+    "trials": [
+      {
+        "description": "alias_swap:f.AdmFName1→s.AdmFName1",
+        "strategy": "alias_swap",
+        "candidate_sql": "SELECT s.School AS School_Name, AVG(sa.AvgScrWrite) AS Average_Writing_Score\nFROM schools s\nJOIN frpm f ON s.CDSCode = f.CDSCode\nJOIN satscores sa ON s.CDSCode = sa.cds\nWHERE s.AdmFName1 = 'Ricci' AND f.AdmLName1 = 'Ulrich'\nGROUP BY s.School;",
+        "exec_success": false,
+        "exec_error": "no such column: f.AdmLName1",
+        "row_count": 0,
+        "ex_pass": false
+      },
+      {
+        "description": "alias_swap:f.AdmLName1→s.AdmLName1",
+        "strategy": "alias_swap",
+        "candidate_sql": "SELECT s.School AS School_Name, AVG(sa.AvgScrWrite) AS Average_Writing_Score\nFROM schools s\nJOIN frpm f ON s.CDSCode = f.CDSCode\nJOIN satscores sa ON s.CDSCode = sa.cds\nWHERE f.AdmFName1 = 'Ricci' AND s.AdmLName1 = 'Ulrich'\nGROUP BY s.School;",
+        "exec_success": false,
+        "exec_error": "no such column: f.AdmFName1",
+        "row_count": 0,
+        "ex_pass": false
+      }
+    ],
+    "repaired": false,
+    "repair_sql": null,
+    "repair_description": null
+  },
+  {
+    "question_id": 62,
+    "db_id": "california_schools",
+    "manual_label": "COMPLEX (AGG_LOGIC, COLUMN_SELECT)",
+    "difficulty": "challenging",
+    "pred_sql": "SELECT COUNT(*) AS TotalNonCharteredSchools\nFROM frpm\nJOIN schools ON frpm.CDSCode = schools.CDSCode\nWHERE schools.Charter = 0\nAND frpm.`Percent (%) Eligible Free (K-12)` < 0.18\nAND frpm.County Name = 'Los Angeles';",
+    "gold_sql": "SELECT COUNT(T2.School) FROM frpm AS T1 INNER JOIN schools AS T2 ON T1.CDSCode = T2.CDSCode WHERE T2.County = 'Los Angeles' AND T2.Charter = 0 AND CAST(T1.`Free Meal Count (K-12)` AS REAL) * 100 / T1.`Enrollment (K-12)` < 0.18",
+    "invalid_refs": [
+      {
+        "qualifier": "frpm",
+        "resolved_table": "frpm",
+        "column": "County",
+        "issue": "column_not_in_resolved_table",
+        "candidate_tables": [
+          "schools"
+        ]
+      }
+    ],
+    "candidates_tried": 1,
+    "needs_join_insertion": [],
+    "trials": [
+      {
+        "description": "table_ref_swap:frpm.County→schools.County",
+        "strategy": "table_ref_swap",
+        "candidate_sql": "SELECT COUNT(*) AS TotalNonCharteredSchools\nFROM frpm\nJOIN schools ON frpm.CDSCode = schools.CDSCode\nWHERE schools.Charter = 0\nAND frpm.`Percent (%) Eligible Free (K-12)` < 0.18\nAND schools.County Name = 'Los Angeles';",
+        "exec_success": false,
+        "exec_error": "near \"Name\": syntax error",
+        "row_count": 0,
+        "ex_pass": false
+      }
+    ],
+    "repaired": false,
+    "repair_sql": null,
+    "repair_description": null
+  },
+  {
+    "question_id": 94,
+    "db_id": "financial",
+    "manual_label": "LOGIC_STRUCT",
+    "difficulty": "challenging",
+    "pred_sql": "WITH SalaryStats AS (\n    SELECT \n        d.A11 AS average_salary,\n        c.client_id,\n        c.gender,\n        c.birth_date,\n        a.account_id\n    FROM \n        client c\n    JOIN \n        disp d ON c.client_id = d.client_id\n    JOIN \n        account a ON d.account_id = a.account_id\n    WHERE \n        c.gender = 'F'\n),\nOldestFemale AS (\n    SELECT \n        client_id,\n        MIN(birth_date) AS oldest_birth_date\n    FROM \n        SalaryStats\n    GROUP BY \n        client_id\n),\nLowestAvgSalary AS (\n    SELECT \n        MIN(average_salary) AS lowest_salary\n    FROM \n        SalaryStats\n    WHERE \n        client_id IN (SELECT client_id FROM OldestFemale)\n),\nHighestAvgSalary AS (\n    SELECT \n        MAX(average_salary) AS highest_salary\n    FROM \n        SalaryStats\n)\nSELECT \n    a.account_id,\n    (h.highest_salary - l.lowest_salary) AS salary_gap\nFROM \n    LowestAvgSalary l,\n    HighestAvgSalary h,\n    SalaryStats a\nWHERE \n    a.average_salary = l.lowest_salary;",
+    "gold_sql": "SELECT T1.account_id , ( SELECT MAX(A11) - MIN(A11) FROM district ) FROM account AS T1 INNER JOIN district AS T2 ON T1.district_id = T2.district_id INNER JOIN disp AS T3 ON T1.account_id = T3.account_id INNER JOIN client AS T4 ON T3.client_id = T4.client_id WHERE T2.district_id = ( SELECT district_id FROM client WHERE gender = 'F' ORDER BY birth_date ASC LIMIT 1 ) ORDER BY T2.A11 DESC LIMIT 1",
+    "invalid_refs": [
+      {
+        "qualifier": "d",
+        "resolved_table": "disp",
+        "column": "A11",
+        "issue": "column_not_in_resolved_table",
+        "candidate_tables": [
+          "district"
+        ]
+      }
+    ],
+    "candidates_tried": 1,
+    "needs_join_insertion": [
+      {
+        "qualifier": "d",
+        "column": "A11",
+        "resolved_table": "disp",
+        "candidate_table": "district",
+        "reason": "candidate_table_not_in_sql"
+      }
+    ],
+    "trials": [
+      {
+        "description": "join_insert:district via client.district_id=district.district_id, d.A11→b.A11",
+        "strategy": "join_insertion",
+        "candidate_sql": "WITH SalaryStats AS (\n    SELECT \n        b.A11 AS average_salary,\n        c.client_id,\n        c.gender,\n        c.birth_date,\n        a.account_id\n    FROM \n        client c\n    JOIN \n        disp d ON c.client_id = d.client_id\n    JOIN \n        account a ON d.account_id = a.account_id\nJOIN [district] b ON c.district_id = b.district_id\nWHERE \n        c.gender = 'F'\n),\nOldestFemale AS (\n    SELECT \n        client_id,\n        MIN(birth_date) AS oldest_birth_date\n    FROM \n        SalaryStats\n    GROUP BY \n        client_id\n),\nLowestAvgSalary AS (\n    SELECT \n        MIN(average_salary) AS lowest_salary\n    FROM \n        SalaryStats\n    WHERE \n        client_id IN (SELECT client_id FROM OldestFemale)\n),\nHighestAvgSalary AS (\n    SELECT \n        MAX(average_salary) AS highest_salary\n    FROM \n        SalaryStats\n)\nSELECT \n    a.account_id,\n    (h.highest_salary - l.lowest_salary) AS salary_gap\nFROM \n    LowestAvgSalary l,\n    HighestAvgSalary h,\n    SalaryStats a\nWHERE \n    a.average_salary = l.lowest_salary",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 20,
+        "ex_pass": false
+      }
+    ],
+    "repaired": false,
+    "repair_sql": null,
+    "repair_description": null
+  },
+  {
+    "question_id": 149,
+    "db_id": "financial",
+    "manual_label": "COLUMN_SELECT",
+    "difficulty": "challenging",
+    "pred_sql": "SELECT DISTINCT d.A2 AS account_type\nFROM account a\nJOIN disp d ON a.account_id = d.account_id\nJOIN district d ON a.district_id = d.district_id\nWHERE d.A11 > 8000 AND d.A11 <= 9000\nAND d.type != 'OWNER'\nAND a.account_id NOT IN (SELECT account_id FROM loan);",
+    "gold_sql": "SELECT T3.type FROM district AS T1 INNER JOIN account AS T2 ON T1.district_id = T2.district_id INNER JOIN disp AS T3 ON T2.account_id = T3.account_id WHERE T3.type != 'OWNER' AND T1.A11 BETWEEN 8000 AND 9000",
+    "invalid_refs": [
+      {
+        "qualifier": "d",
+        "resolved_table": "district",
+        "column": "account_id",
+        "issue": "column_not_in_resolved_table",
+        "candidate_tables": [
+          "account",
+          "disp",
+          "loan",
+          "order",
+          "trans"
+        ]
+      },
+      {
+        "qualifier": "d",
+        "resolved_table": "district",
+        "column": "type",
+        "issue": "column_not_in_resolved_table",
+        "candidate_tables": [
+          "card",
+          "disp",
+          "trans"
+        ]
+      }
+    ],
+    "candidates_tried": 2,
+    "needs_join_insertion": [
+      {
+        "qualifier": "d",
+        "column": "type",
+        "resolved_table": "district",
+        "candidate_table": "card",
+        "reason": "candidate_table_not_in_sql"
+      }
+    ],
+    "trials": [
+      {
+        "description": "alias_swap:d.account_id→a.account_id",
+        "strategy": "alias_swap",
+        "candidate_sql": "SELECT DISTINCT d.A2 AS account_type\nFROM account a\nJOIN disp d ON a.account_id = a.account_id\nJOIN district d ON a.district_id = d.district_id\nWHERE d.A11 > 8000 AND d.A11 <= 9000\nAND d.type != 'OWNER'\nAND a.account_id NOT IN (SELECT account_id FROM loan);",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 50,
+        "ex_pass": false
+      },
+      {
+        "description": "join_insert:card via disp.disp_id=card.disp_id, d.type→l.type",
+        "strategy": "join_insertion",
+        "candidate_sql": "SELECT DISTINCT d.A2 AS account_type\nFROM account a\nJOIN disp d ON a.account_id = d.account_id\nJOIN district d ON a.district_id = d.district_id\nJOIN [card] l ON disp.disp_id = l.disp_id\nWHERE d.A11 > 8000 AND d.A11 <= 9000\nAND l.type != 'OWNER'\nAND a.account_id NOT IN (SELECT account_id FROM loan)",
+        "exec_success": false,
+        "exec_error": "no such column: disp.disp_id",
+        "row_count": 0,
+        "ex_pass": false
+      }
+    ],
+    "repaired": false,
+    "repair_sql": null,
+    "repair_description": null
+  },
+  {
+    "question_id": 168,
+    "db_id": "financial",
+    "manual_label": "JOIN_PATH",
+    "difficulty": "moderate",
+    "pred_sql": "SELECT \n    (COUNT(CASE WHEN c.gender = 'F' THEN 1 END) * 100.0 / COUNT(*)) AS percentage_women\nFROM \n    account a\nJOIN \n    client c ON a.account_id = (SELECT d.account_id FROM disp d WHERE d.client_id = c.client_id)\nJOIN \n    district d ON a.district_id = d.district_id\nWHERE \n    d.A11 > 10000;",
+    "gold_sql": "SELECT CAST(SUM(T2.gender = 'F') AS REAL) * 100 / COUNT(T2.client_id) FROM district AS T1 INNER JOIN client AS T2 ON T1.district_id = T2.district_id WHERE T1.A11 > 10000",
+    "invalid_refs": [
+      {
+        "qualifier": "d",
+        "resolved_table": "district",
+        "column": "account_id",
+        "issue": "column_not_in_resolved_table",
+        "candidate_tables": [
+          "account",
+          "disp",
+          "loan",
+          "order",
+          "trans"
+        ]
+      },
+      {
+        "qualifier": "d",
+        "resolved_table": "district",
+        "column": "client_id",
+        "issue": "column_not_in_resolved_table",
+        "candidate_tables": [
+          "client",
+          "disp"
+        ]
+      }
+    ],
+    "candidates_tried": 2,
+    "needs_join_insertion": [],
+    "trials": [
+      {
+        "description": "alias_swap:d.account_id→a.account_id",
+        "strategy": "alias_swap",
+        "candidate_sql": "SELECT \n    (COUNT(CASE WHEN c.gender = 'F' THEN 1 END) * 100.0 / COUNT(*)) AS percentage_women\nFROM \n    account a\nJOIN \n    client c ON a.account_id = (SELECT a.account_id FROM disp d WHERE d.client_id = c.client_id)\nJOIN \n    district d ON a.district_id = d.district_id\nWHERE \n    d.A11 > 10000;",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      },
+      {
+        "description": "alias_swap:d.client_id→c.client_id",
+        "strategy": "alias_swap",
+        "candidate_sql": "SELECT \n    (COUNT(CASE WHEN c.gender = 'F' THEN 1 END) * 100.0 / COUNT(*)) AS percentage_women\nFROM \n    account a\nJOIN \n    client c ON a.account_id = (SELECT d.account_id FROM disp d WHERE c.client_id = c.client_id)\nJOIN \n    district d ON a.district_id = d.district_id\nWHERE \n    d.A11 > 10000;",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      }
+    ],
+    "repaired": false,
+    "repair_sql": null,
+    "repair_description": null
+  },
+  {
+    "question_id": 119,
+    "db_id": "financial",
+    "manual_label": "LOGIC_STRUCT",
+    "difficulty": "moderate",
+    "pred_sql": "SELECT a.account_id, d.A2 AS district_name, d.A3 AS district_region\nFROM account a\nJOIN district d ON a.district_id = d.district_id\nJOIN trans t ON a.account_id = t.account_id\nJOIN card c ON a.account_id = c.account_id\nWHERE strftime('%Y', a.date) = '1993' \nAND c.type = 'POPLATEK PO OBRATU' \nAND c.issued > t.date;",
+    "gold_sql": "SELECT T1.account_id, T2.A2, T2.A3 FROM account AS T1 INNER JOIN district AS T2 ON T1.district_id = T2.district_id WHERE T1.frequency = 'POPLATEK PO OBRATU' AND STRFTIME('%Y', T1.date)= '1993'",
+    "invalid_refs": [
+      {
+        "qualifier": "c",
+        "resolved_table": "card",
+        "column": "account_id",
+        "issue": "column_not_in_resolved_table",
+        "candidate_tables": [
+          "account",
+          "disp",
+          "loan",
+          "order",
+          "trans"
+        ]
+      }
+    ],
+    "candidates_tried": 2,
+    "needs_join_insertion": [
+      {
+        "qualifier": "c",
+        "column": "account_id",
+        "resolved_table": "card",
+        "candidate_table": "disp",
+        "reason": "candidate_table_not_in_sql"
+      }
+    ],
+    "trials": [
+      {
+        "description": "alias_swap:c.account_id→a.account_id",
+        "strategy": "alias_swap",
+        "candidate_sql": "SELECT a.account_id, d.A2 AS district_name, d.A3 AS district_region\nFROM account a\nJOIN district d ON a.district_id = d.district_id\nJOIN trans t ON a.account_id = t.account_id\nJOIN card c ON a.account_id = a.account_id\nWHERE strftime('%Y', a.date) = '1993' \nAND c.type = 'POPLATEK PO OBRATU' \nAND c.issued > t.date;",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 0,
+        "ex_pass": false
+      },
+      {
+        "description": "join_insert:disp via account.account_id=disp.account_id, c.account_id→l.account_id",
+        "strategy": "join_insertion",
+        "candidate_sql": "SELECT a.account_id, d.A2 AS district_name, d.A3 AS district_region\nFROM account a\nJOIN district d ON a.district_id = d.district_id\nJOIN trans t ON a.account_id = t.account_id\nJOIN card c ON a.account_id = l.account_id\nJOIN [disp] l ON a.account_id = l.account_id\nWHERE strftime('%Y', a.date) = '1993' \nAND c.type = 'POPLATEK PO OBRATU' \nAND c.issued > t.date",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 0,
+        "ex_pass": false
+      }
+    ],
+    "repaired": false,
+    "repair_sql": null,
+    "repair_description": null
+  }
+]
