@@ -1,0 +1,1361 @@
+[
+  {
+    "question_id": 1472,
+    "db_id": "debit_card_specializing",
+    "difficulty": "moderate",
+    "manual_label": "JOIN_PATH",
+    "detected_type": "GENERAL",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [SUM(Consumption) AS Total]",
+        "candidate_sql": "SELECT CustomerID FROM yearmonth WHERE Date BETWEEN '201201' AND '201212' GROUP BY CustomerID ORDER BY TotalConsumption ASC LIMIT 1",
+        "exec_success": false,
+        "exec_error": "no such column: TotalConsumption",
+        "row_count": 0,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [CustomerID]",
+        "candidate_sql": "SELECT SUM(Consumption) AS TotalConsumption FROM yearmonth WHERE Date BETWEEN '201201' AND '201212' GROUP BY CustomerID ORDER BY TotalConsumption ASC LIMIT 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 1479,
+    "db_id": "debit_card_specializing",
+    "difficulty": "moderate",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "GENERAL",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [SUM(Consumption) AS Total]",
+        "candidate_sql": "SELECT STRFTIME('%Y', Date) AS Year FROM yearmonth WHERE CustomerID IN (SELECT CustomerID FROM customers WHERE Currency = 'CZK') GROUP BY Year ORDER BY TotalConsumption DESC LIMIT 1",
+        "exec_success": false,
+        "exec_error": "no such column: TotalConsumption",
+        "row_count": 0,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [STRFTIME('%Y', Date) AS Y]",
+        "candidate_sql": "SELECT SUM(Consumption) AS TotalConsumption FROM yearmonth WHERE CustomerID IN (SELECT CustomerID FROM customers WHERE Currency = 'CZK') GROUP BY Year ORDER BY TotalConsumption DESC LIMIT 1",
+        "exec_success": false,
+        "exec_error": "no such column: Year",
+        "row_count": 0,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 1480,
+    "db_id": "debit_card_specializing",
+    "difficulty": "moderate",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "GENERAL",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [SUM(Consumption) AS Total]",
+        "candidate_sql": "SELECT SUBSTRING(Date, 5, 2) AS Month FROM yearmonth JOIN customers ON yearmonth.CustomerID = customers.CustomerID WHERE SUBSTRING(Date, 1, 4) = '2013' AND customers.Segment = 'SME' GROUP BY Month ORDER BY TotalConsumption DESC LIMIT 1",
+        "exec_success": false,
+        "exec_error": "no such column: TotalConsumption",
+        "row_count": 0,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [SUBSTRING(Date, 5, 2) AS ]",
+        "candidate_sql": "SELECT SUM(Consumption) AS TotalConsumption FROM yearmonth JOIN customers ON yearmonth.CustomerID = customers.CustomerID WHERE SUBSTRING(Date, 1, 4) = '2013' AND customers.Segment = 'SME' GROUP BY Month ORDER BY TotalConsumption DESC LIMIT 1",
+        "exec_success": false,
+        "exec_error": "no such column: Month",
+        "row_count": 0,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 1533,
+    "db_id": "debit_card_specializing",
+    "difficulty": "moderate",
+    "manual_label": "COMPLEX (COLUMN_SELECT, VALUE_FORMAT)",
+    "detected_type": "GENERAL",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [y.Consumption]",
+        "candidate_sql": "SELECT y.CustomerID FROM yearmonth AS y JOIN transactions_1k AS t ON y.CustomerID = t.CustomerID WHERE t.ProductID = 5 AND (t.Price / t.Amount) > 29.00 AND STRFTIME('%Y-%m', t.Date) = '2012-08'",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 178,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [y.CustomerID]",
+        "candidate_sql": "SELECT y.Consumption FROM yearmonth AS y JOIN transactions_1k AS t ON y.CustomerID = t.CustomerID WHERE t.ProductID = 5 AND (t.Price / t.Amount) > 29.00 AND STRFTIME('%Y-%m', t.Date) = '2012-08'",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 178,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 1376,
+    "db_id": "student_club",
+    "difficulty": "moderate",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "AGG_LOGIC",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [(CAST(budget.spent AS REA]",
+        "candidate_sql": "SELECT event.event_name FROM event JOIN budget ON event.event_id = budget.link_to_event WHERE event.status = 'Closed' AND budget.amount > 0 ORDER BY spend_to_budget_ratio DESC LIMIT 1",
+        "exec_success": false,
+        "exec_error": "no such column: spend_to_budget_ratio",
+        "row_count": 0,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [event.event_name]",
+        "candidate_sql": "SELECT (CAST(budget.spent AS REAL) / CAST(budget.amount AS REAL)) AS spend_to_budget_ratio FROM event JOIN budget ON event.event_id = budget.link_to_event WHERE event.status = 'Closed' AND budget.amount > 0 ORDER BY spend_to_budget_ratio DESC LIMIT 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 1389,
+    "db_id": "student_club",
+    "difficulty": "simple",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "GENERAL",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [lowest_cost]",
+        "candidate_sql": "SELECT event_name FROM (SELECT e.event_name, MIN(ex.cost) AS lowest_cost FROM event AS e JOIN budget AS b ON e.event_id = b.link_to_event JOIN expense AS ex ON b.budget_id = ex.link_to_budget GROUP BY e.event_id, e.event_name) AS event_costs ORDER BY lowest_cost ASC LIMIT 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [event_name]",
+        "candidate_sql": "SELECT lowest_cost FROM (SELECT e.event_name, MIN(ex.cost) AS lowest_cost FROM event AS e JOIN budget AS b ON e.event_id = b.link_to_event JOIN expense AS ex ON b.budget_id = ex.link_to_budget GROUP BY e.event_id, e.event_name) AS event_costs ORDER BY lowest_cost ASC LIMIT 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 1392,
+    "db_id": "student_club",
+    "difficulty": "simple",
+    "manual_label": "COMPLEX (LOGIC_STRUCT, COLUMN_SELECT)",
+    "detected_type": "GENERAL",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [SUM(amount) AS total_amou]",
+        "candidate_sql": "SELECT source FROM income WHERE date_received BETWEEN '2019-09-01' AND '2019-09-30' GROUP BY source ORDER BY total_amount DESC LIMIT 1",
+        "exec_success": false,
+        "exec_error": "no such column: total_amount",
+        "row_count": 0,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [source]",
+        "candidate_sql": "SELECT SUM(amount) AS total_amount FROM income WHERE date_received BETWEEN '2019-09-01' AND '2019-09-30' GROUP BY source ORDER BY total_amount DESC LIMIT 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 1149,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "moderate",
+    "manual_label": "COMPLEX (LOGIC_STRUCT, COLUMN_SELECT)",
+    "detected_type": "AGG_LOGIC",
+    "pred_cols": 3,
+    "gold_cols": 1,
+    "diff": 2,
+    "candidates_tried": 3,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [OutPatientCount, CASE WHEN OutPatientCount]",
+        "candidate_sql": "WITH MaleCounts AS (SELECT SUM(CASE WHEN Admission = '+' THEN 1 ELSE 0 END) AS InPatientCount, SUM(CASE WHEN Admission = '-' THEN 1 ELSE 0 END) AS OutPatientCount FROM Patient WHERE SEX = 'M') SELECT InPatientCount FROM MaleCounts",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [InPatientCount, CASE WHEN OutPatientCount]",
+        "candidate_sql": "WITH MaleCounts AS (SELECT SUM(CASE WHEN Admission = '+' THEN 1 ELSE 0 END) AS InPatientCount, SUM(CASE WHEN Admission = '-' THEN 1 ELSE 0 END) AS OutPatientCount FROM Patient WHERE SEX = 'M') SELECT OutPatientCount FROM MaleCounts",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(2,): removed [InPatientCount, OutPatientCount]",
+        "candidate_sql": "WITH MaleCounts AS (SELECT SUM(CASE WHEN Admission = '+' THEN 1 ELSE 0 END) AS InPatientCount, SUM(CASE WHEN Admission = '-' THEN 1 ELSE 0 END) AS OutPatientCount FROM Patient WHERE SEX = 'M') SELECT CASE WHEN OutPatientCount = 0 THEN NULL ELSE (CAST(InPatientCount AS REAL) - CAST(OutPatientCount AS REAL)) * 100.0 / CAST(OutPatientCount AS REAL) END AS PercentageDeviation FROM MaleCounts",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 1169,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "challenging",
+    "manual_label": "COMPLEX (LOGIC_STRUCT, COLUMN_SELECT)",
+    "detected_type": "AGG_LOGIC",
+    "pred_cols": 3,
+    "gold_cols": 1,
+    "diff": 2,
+    "candidates_tried": 3,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [CAST((SELECT COUNT(*) FRO, CAST((SELECT COUNT(*) FRO]",
+        "candidate_sql": "SELECT CAST((SELECT COUNT(*) FROM Patient AS p JOIN Laboratory AS l ON p.ID = l.ID WHERE p.SEX = 'M' AND l.UA > 8.0) AS REAL) AS Male_Count",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [CAST((SELECT COUNT(*) FRO, CAST((SELECT COUNT(*) FRO]",
+        "candidate_sql": "SELECT CAST((SELECT COUNT(*) FROM Patient AS p JOIN Laboratory AS l ON p.ID = l.ID WHERE p.SEX = 'F' AND l.UA > 6.5) AS REAL) AS Female_Count",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(2,): removed [CAST((SELECT COUNT(*) FRO, CAST((SELECT COUNT(*) FRO]",
+        "candidate_sql": "SELECT CAST((SELECT COUNT(*) FROM Patient AS p JOIN Laboratory AS l ON p.ID = l.ID WHERE p.SEX = 'M' AND l.UA > 8.0) AS REAL) / NULLIF((SELECT COUNT(*) FROM Patient AS p JOIN Laboratory AS l ON p.ID = l.ID WHERE p.SEX = 'F' AND l.UA > 6.5), 0) AS Male_to_Female_Ratio",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 1192,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "challenging",
+    "manual_label": "COMPLEX (COLUMN_SELECT, LOGIC_STRUCT, VALUE_FORMAT)",
+    "detected_type": "GENERAL",
+    "pred_cols": 7,
+    "gold_cols": 1,
+    "diff": 6,
+    "candidates_tried": 7,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [p.SEX, p.Birthday, p.Description, p.\"First Date\", p.Admission, p.Diagnosis]",
+        "candidate_sql": "SELECT DISTINCT p.ID FROM Patient AS p JOIN Laboratory AS l ON p.ID = l.ID WHERE p.Admission <> '-' AND l.Date BETWEEN '1991-10-01' AND '1991-10-31' AND l.\"T-BIL\" < 2.0;  /* Assuming 2.0 is the intended threshold for normal range */",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 13,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [p.ID, p.Birthday, p.Description, p.\"First Date\", p.Admission, p.Diagnosis]",
+        "candidate_sql": "SELECT DISTINCT p.SEX FROM Patient AS p JOIN Laboratory AS l ON p.ID = l.ID WHERE p.Admission <> '-' AND l.Date BETWEEN '1991-10-01' AND '1991-10-31' AND l.\"T-BIL\" < 2.0;  /* Assuming 2.0 is the intended threshold for normal range */",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 3,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(2,): removed [p.ID, p.SEX, p.Description, p.\"First Date\", p.Admission, p.Diagnosis]",
+        "candidate_sql": "SELECT DISTINCT p.Birthday FROM Patient AS p JOIN Laboratory AS l ON p.ID = l.ID WHERE p.Admission <> '-' AND l.Date BETWEEN '1991-10-01' AND '1991-10-31' AND l.\"T-BIL\" < 2.0;  /* Assuming 2.0 is the intended threshold for normal range */",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 13,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(3,): removed [p.ID, p.SEX, p.Birthday, p.\"First Date\", p.Admission, p.Diagnosis]",
+        "candidate_sql": "SELECT DISTINCT p.Description FROM Patient AS p JOIN Laboratory AS l ON p.ID = l.ID WHERE p.Admission <> '-' AND l.Date BETWEEN '1991-10-01' AND '1991-10-31' AND l.\"T-BIL\" < 2.0;  /* Assuming 2.0 is the intended threshold for normal range */",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 10,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(4,): removed [p.ID, p.SEX, p.Birthday, p.Description, p.Admission, p.Diagnosis]",
+        "candidate_sql": "SELECT DISTINCT p.\"First Date\" FROM Patient AS p JOIN Laboratory AS l ON p.ID = l.ID WHERE p.Admission <> '-' AND l.Date BETWEEN '1991-10-01' AND '1991-10-31' AND l.\"T-BIL\" < 2.0;  /* Assuming 2.0 is the intended threshold for normal range */",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 10,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(5,): removed [p.ID, p.SEX, p.Birthday, p.Description, p.\"First Date\", p.Diagnosis]",
+        "candidate_sql": "SELECT DISTINCT p.Admission FROM Patient AS p JOIN Laboratory AS l ON p.ID = l.ID WHERE p.Admission <> '-' AND l.Date BETWEEN '1991-10-01' AND '1991-10-31' AND l.\"T-BIL\" < 2.0;  /* Assuming 2.0 is the intended threshold for normal range */",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(6,): removed [p.ID, p.SEX, p.Birthday, p.Description, p.\"First Date\", p.Admission]",
+        "candidate_sql": "SELECT DISTINCT p.Diagnosis FROM Patient AS p JOIN Laboratory AS l ON p.ID = l.ID WHERE p.Admission <> '-' AND l.Date BETWEEN '1991-10-01' AND '1991-10-31' AND l.\"T-BIL\" < 2.0;  /* Assuming 2.0 is the intended threshold for normal range */",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 9,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 1241,
+    "db_id": "thrombosis_prediction",
+    "difficulty": "challenging",
+    "manual_label": "LOGIC_STRUCT",
+    "detected_type": "GENERAL",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [COUNT(DISTINCT CASE WHEN ]",
+        "candidate_sql": "SELECT COUNT(DISTINCT CASE WHEN L.PLT < 100 THEN L.ID END) AS Lower_Than_Normal FROM Laboratory AS L WHERE L.PLT < 100 OR L.PLT > 400",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [COUNT(DISTINCT CASE WHEN ]",
+        "candidate_sql": "SELECT COUNT(DISTINCT CASE WHEN L.PLT > 400 THEN L.ID END) AS Higher_Than_Normal FROM Laboratory AS L WHERE L.PLT < 100 OR L.PLT > 400",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 1029,
+    "db_id": "european_football_2",
+    "difficulty": "moderate",
+    "manual_label": "COMPLEX (JOIN_PATH, COLUMN_SELECT, LOGIC_STRUCT)",
+    "detected_type": "GENERAL",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [lta.buildUpPlaySpeed]",
+        "candidate_sql": "WITH LatestTeamAttributes AS (SELECT team_fifa_api_id, buildUpPlaySpeed FROM Team_Attributes AS ta WHERE date = (SELECT MAX(date) FROM Team_Attributes WHERE team_fifa_api_id = ta.team_fifa_api_id)) SELECT t.team_long_name FROM LatestTeamAttributes AS lta JOIN Team AS t ON lta.team_fifa_api_id = t.team_fifa_api_id ORDER BY lta.buildUpPlaySpeed DESC LIMIT 4",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 4,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [t.team_long_name]",
+        "candidate_sql": "WITH LatestTeamAttributes AS (SELECT team_fifa_api_id, buildUpPlaySpeed FROM Team_Attributes AS ta WHERE date = (SELECT MAX(date) FROM Team_Attributes WHERE team_fifa_api_id = ta.team_fifa_api_id)) SELECT lta.buildUpPlaySpeed FROM LatestTeamAttributes AS lta JOIN Team AS t ON lta.team_fifa_api_id = t.team_fifa_api_id ORDER BY lta.buildUpPlaySpeed DESC LIMIT 4",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 4,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 1031,
+    "db_id": "european_football_2",
+    "difficulty": "challenging",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "GENERAL",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [(STRFTIME('%Y', Player_At]",
+        "candidate_sql": "SELECT Player.player_name FROM Player JOIN Player_Attributes ON Player.player_api_id = Player_Attributes.player_api_id WHERE Player_Attributes.sprint_speed >= 97 AND Player_Attributes.date BETWEEN '2013-01-01' AND '2015-12-31'",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 23,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [Player.player_name]",
+        "candidate_sql": "SELECT (STRFTIME('%Y', Player_Attributes.date) - STRFTIME('%Y', Player.birthday)) AS age FROM Player JOIN Player_Attributes ON Player.player_api_id = Player_Attributes.player_api_id WHERE Player_Attributes.sprint_speed >= 97 AND Player_Attributes.date BETWEEN '2013-01-01' AND '2015-12-31'",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 23,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 1058,
+    "db_id": "european_football_2",
+    "difficulty": "challenging",
+    "manual_label": "LOGIC_STRUCT",
+    "detected_type": "GENERAL",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [AVG(finishing) AS average]",
+        "candidate_sql": "SELECT player_name FROM Player JOIN Player_Attributes ON Player.player_api_id = Player_Attributes.player_api_id WHERE height = (SELECT MIN(height) FROM Player) OR height = (SELECT MAX(height) FROM Player) GROUP BY player_name ORDER BY average_finishing DESC LIMIT 1",
+        "exec_success": false,
+        "exec_error": "no such column: average_finishing",
+        "row_count": 0,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [player_name]",
+        "candidate_sql": "SELECT AVG(finishing) AS average_finishing FROM Player JOIN Player_Attributes ON Player.player_api_id = Player_Attributes.player_api_id WHERE height = (SELECT MIN(height) FROM Player) OR height = (SELECT MAX(height) FROM Player) GROUP BY player_name ORDER BY average_finishing DESC LIMIT 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 1078,
+    "db_id": "european_football_2",
+    "difficulty": "simple",
+    "manual_label": "COMPLEX (COLUMN_SELECT, LOGIC_STRUCT)",
+    "detected_type": "GENERAL",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 1,
+    "repaired": true,
+    "repair_description": "keep_idx_(0,): removed [birthday]",
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [birthday]",
+        "candidate_sql": "SELECT player_name FROM Player WHERE player_name IN ('Aaron Lennon', 'Abdelaziz Barrada') ORDER BY birthday ASC LIMIT 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": true
+      }
+    ]
+  },
+  {
+    "question_id": 1079,
+    "db_id": "european_football_2",
+    "difficulty": "simple",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "GENERAL",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 1,
+    "repaired": true,
+    "repair_description": "keep_idx_(0,): removed [height]",
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [height]",
+        "candidate_sql": "SELECT player_name FROM Player WHERE height = (SELECT MAX(height) FROM Player)",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": true
+      }
+    ]
+  },
+  {
+    "question_id": 1145,
+    "db_id": "european_football_2",
+    "difficulty": "simple",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "GENERAL",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [COUNT(M.id) AS game_count]",
+        "candidate_sql": "SELECT L.name FROM Match AS M JOIN League AS L ON M.league_id = L.id WHERE M.season = '2015/2016' GROUP BY L.name ORDER BY game_count DESC LIMIT 4",
+        "exec_success": false,
+        "exec_error": "no such column: game_count",
+        "row_count": 0,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [L.name]",
+        "candidate_sql": "SELECT COUNT(M.id) AS game_count FROM Match AS M JOIN League AS L ON M.league_id = L.id WHERE M.season = '2015/2016' GROUP BY L.name ORDER BY game_count DESC LIMIT 4",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 4,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 865,
+    "db_id": "formula_1",
+    "difficulty": "moderate",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "JOIN_PATH",
+    "pred_cols": 3,
+    "gold_cols": 2,
+    "diff": 1,
+    "candidates_tried": 3,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0, 1): removed [d.dob]",
+        "candidate_sql": "SELECT d.forename, d.surname FROM drivers AS d JOIN results AS r ON d.driverId = r.driverId WHERE r.raceId = 592 AND NOT r.position IS NULL ORDER BY d.dob DESC LIMIT 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(0, 2): removed [d.surname]",
+        "candidate_sql": "SELECT d.forename, d.dob FROM drivers AS d JOIN results AS r ON d.driverId = r.driverId WHERE r.raceId = 592 AND NOT r.position IS NULL ORDER BY d.dob DESC LIMIT 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1, 2): removed [d.forename]",
+        "candidate_sql": "SELECT d.surname, d.dob FROM drivers AS d JOIN results AS r ON d.driverId = r.driverId WHERE r.raceId = 592 AND NOT r.position IS NULL ORDER BY d.dob DESC LIMIT 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 877,
+    "db_id": "formula_1",
+    "difficulty": "moderate",
+    "manual_label": "COMPLEX (COLUMN_SELECT, LOGIC_STRUCT)",
+    "detected_type": "JOIN_PATH",
+    "pred_cols": 3,
+    "gold_cols": 2,
+    "diff": 1,
+    "candidates_tried": 3,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0, 1): removed [d.dob]",
+        "candidate_sql": "SELECT d.forename, d.surname FROM drivers AS d JOIN results AS r ON d.driverId = r.driverId WHERE r.raceId = 872 AND NOT r.time IS NULL ORDER BY d.dob ASC LIMIT 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(0, 2): removed [d.surname]",
+        "candidate_sql": "SELECT d.forename, d.dob FROM drivers AS d JOIN results AS r ON d.driverId = r.driverId WHERE r.raceId = 872 AND NOT r.time IS NULL ORDER BY d.dob ASC LIMIT 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1, 2): removed [d.forename]",
+        "candidate_sql": "SELECT d.surname, d.dob FROM drivers AS d JOIN results AS r ON d.driverId = r.driverId WHERE r.raceId = 872 AND NOT r.time IS NULL ORDER BY d.dob ASC LIMIT 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 930,
+    "db_id": "formula_1",
+    "difficulty": "simple",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "GENERAL",
+    "pred_cols": 3,
+    "gold_cols": 1,
+    "diff": 2,
+    "candidates_tried": 3,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [r.year, r.round]",
+        "candidate_sql": "SELECT r.name FROM results AS res JOIN races AS r ON res.raceId = r.raceId JOIN drivers AS d ON res.driverId = d.driverId WHERE d.forename = 'Lewis' AND d.surname = 'Hamilton' AND res.rank = (SELECT MIN(rank) FROM results WHERE driverId = d.driverId) ORDER BY r.year, r.round LIMIT 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [r.name, r.round]",
+        "candidate_sql": "SELECT r.year FROM results AS res JOIN races AS r ON res.raceId = r.raceId JOIN drivers AS d ON res.driverId = d.driverId WHERE d.forename = 'Lewis' AND d.surname = 'Hamilton' AND res.rank = (SELECT MIN(rank) FROM results WHERE driverId = d.driverId) ORDER BY r.year, r.round LIMIT 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(2,): removed [r.name, r.year]",
+        "candidate_sql": "SELECT r.round FROM results AS res JOIN races AS r ON res.raceId = r.raceId JOIN drivers AS d ON res.driverId = d.driverId WHERE d.forename = 'Lewis' AND d.surname = 'Hamilton' AND res.rank = (SELECT MIN(rank) FROM results WHERE driverId = d.driverId) ORDER BY r.year, r.round LIMIT 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 978,
+    "db_id": "formula_1",
+    "difficulty": "simple",
+    "manual_label": null,
+    "detected_type": "AGG_LOGIC",
+    "pred_cols": 4,
+    "gold_cols": 3,
+    "diff": 1,
+    "candidates_tried": 1,
+    "repaired": true,
+    "repair_description": "keep_idx_(0, 1, 2): removed [(SELECT COUNT(*) FROM cir]",
+    "trials": [
+      {
+        "description": "keep_idx_(0, 1, 2): removed [(SELECT COUNT(*) FROM cir]",
+        "candidate_sql": "SELECT location, lat, lng FROM circuits WHERE country = 'Austria'",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 3,
+        "ex_pass": true
+      }
+    ]
+  },
+  {
+    "question_id": 989,
+    "db_id": "formula_1",
+    "difficulty": "moderate",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "GENERAL",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": true,
+    "repair_description": "keep_idx_(1,): removed [d.forename || ' ' || d.su]",
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [res.time]",
+        "candidate_sql": "SELECT d.forename || ' ' || d.surname AS champion FROM results AS res JOIN races AS r ON res.raceId = r.raceId JOIN drivers AS d ON res.driverId = d.driverId WHERE r.year = 2008 AND r.name = 'Canadian Grand Prix' AND res.position = 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [d.forename || ' ' || d.su]",
+        "candidate_sql": "SELECT res.time FROM results AS res JOIN races AS r ON res.raceId = r.raceId JOIN drivers AS d ON res.driverId = d.driverId WHERE r.year = 2008 AND r.name = 'Canadian Grand Prix' AND res.position = 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": true
+      }
+    ]
+  },
+  {
+    "question_id": 1014,
+    "db_id": "formula_1",
+    "difficulty": "challenging",
+    "manual_label": "LOGIC_STRUCT",
+    "detected_type": "GENERAL",
+    "pred_cols": 6,
+    "gold_cols": 1,
+    "diff": 5,
+    "candidates_tried": 6,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [l.driverId, l.lap, l.time, l.milliseconds, c.name AS circuitName]",
+        "candidate_sql": "SELECT l.raceId FROM lapTimes AS l JOIN races AS r ON l.raceId = r.raceId JOIN circuits AS c ON r.circuitId = c.circuitId WHERE c.country = 'Italy' ORDER BY l.raceId, l.lap",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 31801,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [l.raceId, l.lap, l.time, l.milliseconds, c.name AS circuitName]",
+        "candidate_sql": "SELECT l.driverId FROM lapTimes AS l JOIN races AS r ON l.raceId = r.raceId JOIN circuits AS c ON r.circuitId = c.circuitId WHERE c.country = 'Italy' ORDER BY l.raceId, l.lap",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 31801,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(2,): removed [l.raceId, l.driverId, l.time, l.milliseconds, c.name AS circuitName]",
+        "candidate_sql": "SELECT l.lap FROM lapTimes AS l JOIN races AS r ON l.raceId = r.raceId JOIN circuits AS c ON r.circuitId = c.circuitId WHERE c.country = 'Italy' ORDER BY l.raceId, l.lap",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 31801,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(3,): removed [l.raceId, l.driverId, l.lap, l.milliseconds, c.name AS circuitName]",
+        "candidate_sql": "SELECT l.time FROM lapTimes AS l JOIN races AS r ON l.raceId = r.raceId JOIN circuits AS c ON r.circuitId = c.circuitId WHERE c.country = 'Italy' ORDER BY l.raceId, l.lap",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 31801,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(4,): removed [l.raceId, l.driverId, l.lap, l.time, c.name AS circuitName]",
+        "candidate_sql": "SELECT l.milliseconds FROM lapTimes AS l JOIN races AS r ON l.raceId = r.raceId JOIN circuits AS c ON r.circuitId = c.circuitId WHERE c.country = 'Italy' ORDER BY l.raceId, l.lap",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 31801,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(5,): removed [l.raceId, l.driverId, l.lap, l.time, l.milliseconds]",
+        "candidate_sql": "SELECT c.name AS circuitName FROM lapTimes AS l JOIN races AS r ON l.raceId = r.raceId JOIN circuits AS c ON r.circuitId = c.circuitId WHERE c.country = 'Italy' ORDER BY l.raceId, l.lap",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 31801,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 531,
+    "db_id": "codebase_community",
+    "difficulty": "simple",
+    "manual_label": "LOGIC_STRUCT",
+    "detected_type": "GENERAL",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [Reputation]",
+        "candidate_sql": "SELECT DisplayName FROM users WHERE DisplayName IN ('Harlan', 'Jarrod Dixon') ORDER BY Reputation DESC",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 2,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [DisplayName]",
+        "candidate_sql": "SELECT Reputation FROM users WHERE DisplayName IN ('Harlan', 'Jarrod Dixon') ORDER BY Reputation DESC",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 2,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 595,
+    "db_id": "codebase_community",
+    "difficulty": "moderate",
+    "manual_label": "LOGIC_STRUCT",
+    "detected_type": "EMPTY_JOIN_PATH",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [u.DisplayName]",
+        "candidate_sql": "SELECT u.Id FROM users AS u JOIN posts AS p ON u.Id = p.OwnerUserId WHERE p.ViewCount >= 1000 GROUP BY u.Id HAVING COUNT(p.Id) = 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 2062,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [u.Id]",
+        "candidate_sql": "SELECT u.DisplayName FROM users AS u JOIN posts AS p ON u.Id = p.OwnerUserId WHERE p.ViewCount >= 1000 GROUP BY u.Id HAVING COUNT(p.Id) = 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 2062,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 340,
+    "db_id": "card_games",
+    "difficulty": "simple",
+    "manual_label": "DOMAIN",
+    "detected_type": "GENERAL",
+    "pred_cols": 74,
+    "gold_cols": 1,
+    "diff": 73,
+    "candidates_tried": 0,
+    "repaired": false,
+    "repair_description": null,
+    "trials": []
+  },
+  {
+    "question_id": 344,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "GENERAL",
+    "pred_cols": 74,
+    "gold_cols": 1,
+    "diff": 73,
+    "candidates_tried": 0,
+    "repaired": false,
+    "repair_description": null,
+    "trials": []
+  },
+  {
+    "question_id": 391,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "GENERAL",
+    "pred_cols": 74,
+    "gold_cols": 1,
+    "diff": 73,
+    "candidates_tried": 0,
+    "repaired": false,
+    "repair_description": null,
+    "trials": []
+  },
+  {
+    "question_id": 402,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "manual_label": "LOGIC_STRUCT",
+    "detected_type": "AGG_LOGIC",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [(COUNT(CASE WHEN isTextle]",
+        "candidate_sql": "SELECT id FROM cards WHERE isStorySpotlight = 1 GROUP BY id HAVING COUNT(*) > 0;  /* This ensures we only consider groups with Story Spotlight cards */",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 104,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [id]",
+        "candidate_sql": "SELECT (COUNT(CASE WHEN isTextless = 1 THEN 1 END) * 100.0 / COUNT(*)) AS percentage FROM cards WHERE isStorySpotlight = 1 GROUP BY id HAVING COUNT(*) > 0;  /* This ensures we only consider groups with Story Spotlight cards */",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 104,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 459,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "GENERAL",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [convertedManaCost]",
+        "candidate_sql": "SELECT name FROM cards WHERE name IN ('Serra Angel', 'Shrine Keeper') ORDER BY convertedManaCost DESC",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 46,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [name]",
+        "candidate_sql": "SELECT convertedManaCost FROM cards WHERE name IN ('Serra Angel', 'Shrine Keeper') ORDER BY convertedManaCost DESC",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 46,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 530,
+    "db_id": "card_games",
+    "difficulty": "moderate",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "GENERAL",
+    "pred_cols": 76,
+    "gold_cols": 3,
+    "diff": 73,
+    "candidates_tried": 0,
+    "repaired": false,
+    "repair_description": null,
+    "trials": []
+  },
+  {
+    "question_id": 200,
+    "db_id": "toxicology",
+    "difficulty": "simple",
+    "manual_label": "VALUE_FORMAT",
+    "detected_type": "GENERAL",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 1,
+    "repaired": true,
+    "repair_description": "keep_idx_(0,): removed [m.label]",
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [m.label]",
+        "candidate_sql": "SELECT DISTINCT m.molecule_id FROM molecule AS m JOIN bond AS b ON m.molecule_id = b.molecule_id WHERE b.bond_type = '#' AND m.label = '+'",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 2,
+        "ex_pass": true
+      }
+    ]
+  },
+  {
+    "question_id": 208,
+    "db_id": "toxicology",
+    "difficulty": "moderate",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "GENERAL",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [COUNT(m.label) AS label_c]",
+        "candidate_sql": "SELECT m.label FROM molecule AS m JOIN atom AS a ON m.molecule_id = a.molecule_id WHERE a.element = 'h' /* Ensure this matches the representation of hydrogen in the database */ GROUP BY m.label ORDER BY label_count DESC LIMIT 1",
+        "exec_success": false,
+        "exec_error": "no such column: label_count",
+        "row_count": 0,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [m.label]",
+        "candidate_sql": "SELECT COUNT(m.label) AS label_count FROM molecule AS m JOIN atom AS a ON m.molecule_id = a.molecule_id WHERE a.element = 'h' /* Ensure this matches the representation of hydrogen in the database */ GROUP BY m.label ORDER BY label_count DESC LIMIT 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 212,
+    "db_id": "toxicology",
+    "difficulty": "challenging",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "GENERAL",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [COUNT(atom.element) AS el]",
+        "candidate_sql": "SELECT atom.element FROM atom JOIN molecule ON atom.molecule_id = molecule.molecule_id WHERE molecule.label = '-' GROUP BY atom.element ORDER BY element_count ASC LIMIT 1",
+        "exec_success": false,
+        "exec_error": "no such column: element_count",
+        "row_count": 0,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [atom.element]",
+        "candidate_sql": "SELECT COUNT(atom.element) AS element_count FROM atom JOIN molecule ON atom.molecule_id = molecule.molecule_id WHERE molecule.label = '-' GROUP BY atom.element ORDER BY element_count ASC LIMIT 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 231,
+    "db_id": "toxicology",
+    "difficulty": "challenging",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "SYNTAX",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [COUNT(b.bond_type) AS bon]",
+        "candidate_sql": "SELECT b.bond_type FROM bond AS b WHERE b.molecule_id = 'TR010' GROUP BY b.bond_type ORDER BY bond_count DESC LIMIT 1",
+        "exec_success": false,
+        "exec_error": "no such column: bond_count",
+        "row_count": 0,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [b.bond_type]",
+        "candidate_sql": "SELECT COUNT(b.bond_type) AS bond_count FROM bond AS b WHERE b.molecule_id = 'TR010' GROUP BY b.bond_type ORDER BY bond_count DESC LIMIT 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 281,
+    "db_id": "toxicology",
+    "difficulty": "challenging",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "GENERAL",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 1,
+    "repaired": true,
+    "repair_description": "keep_idx_(0,): removed [COUNT(*) AS tally]",
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [COUNT(*) AS tally]",
+        "candidate_sql": "WITH RankedAtoms AS (SELECT a.element, a.molecule_id, ROW_NUMBER() OVER (PARTITION BY a.molecule_id ORDER BY a.atom_id) AS atom_rank FROM atom AS a JOIN molecule AS m ON a.molecule_id = m.molecule_id WHERE m.label = '+') SELECT element FROM RankedAtoms WHERE atom_rank = 4 GROUP BY element",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 8,
+        "ex_pass": true
+      }
+    ]
+  },
+  {
+    "question_id": 23,
+    "db_id": "california_schools",
+    "difficulty": "moderate",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "GENERAL",
+    "pred_cols": 5,
+    "gold_cols": 2,
+    "diff": 3,
+    "candidates_tried": 1,
+    "repaired": true,
+    "repair_description": "keep_idx_(0, 1): removed [s.City, s.Zip, s.State]",
+    "trials": [
+      {
+        "description": "keep_idx_(0, 1): removed [s.City, s.Zip, s.State]",
+        "candidate_sql": "SELECT s.School, s.Street FROM frpm AS f JOIN schools AS s ON f.CDSCode = s.CDSCode WHERE ABS(f.\"Enrollment (K-12)\" - f.\"Enrollment (Ages 5-17)\") > 30",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1239,
+        "ex_pass": true
+      }
+    ]
+  },
+  {
+    "question_id": 31,
+    "db_id": "california_schools",
+    "difficulty": "moderate",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "GENERAL",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [(\"Free Meal Count (K-12)\"]",
+        "candidate_sql": "SELECT \"School Name\" FROM frpm WHERE CAST(\"Low Grade\" AS INTEGER) <= 1 AND CAST(\"High Grade\" AS INTEGER) >= 12 ORDER BY \"Enrollment (K-12)\" DESC LIMIT 2 OFFSET 9",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 2,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [\"School Name\"]",
+        "candidate_sql": "SELECT (\"Free Meal Count (K-12)\" / \"Enrollment (K-12)\") AS Eligible_Free_Rate FROM frpm WHERE CAST(\"Low Grade\" AS INTEGER) <= 1 AND CAST(\"High Grade\" AS INTEGER) >= 12 ORDER BY \"Enrollment (K-12)\" DESC LIMIT 2 OFFSET 9",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 2,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 46,
+    "db_id": "california_schools",
+    "difficulty": "simple",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "GENERAL",
+    "pred_cols": 3,
+    "gold_cols": 1,
+    "diff": 2,
+    "candidates_tried": 3,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [s.School, SUM(f.\"Enrollment (K-12)\"]",
+        "candidate_sql": "SELECT s.State FROM frpm AS f JOIN schools AS s ON f.CDSCode = s.CDSCode WHERE f.\"Low Grade\" <= '12' AND f.\"High Grade\" >= '1' GROUP BY s.State, s.School ORDER BY Total_Enrollment DESC",
+        "exec_success": false,
+        "exec_error": "no such column: Total_Enrollment",
+        "row_count": 0,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [s.State, SUM(f.\"Enrollment (K-12)\"]",
+        "candidate_sql": "SELECT s.School FROM frpm AS f JOIN schools AS s ON f.CDSCode = s.CDSCode WHERE f.\"Low Grade\" <= '12' AND f.\"High Grade\" >= '1' GROUP BY s.State, s.School ORDER BY Total_Enrollment DESC",
+        "exec_success": false,
+        "exec_error": "no such column: Total_Enrollment",
+        "row_count": 0,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(2,): removed [s.State, s.School]",
+        "candidate_sql": "SELECT SUM(f.\"Enrollment (K-12)\") AS Total_Enrollment FROM frpm AS f JOIN schools AS s ON f.CDSCode = s.CDSCode WHERE f.\"Low Grade\" <= '12' AND f.\"High Grade\" >= '1' GROUP BY s.State, s.School ORDER BY Total_Enrollment DESC",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 103,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 98,
+    "db_id": "financial",
+    "difficulty": "moderate",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "GENERAL",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [l.amount]",
+        "candidate_sql": "SELECT a.account_id FROM account AS a JOIN loan AS l ON a.account_id = l.account_id WHERE STRFTIME('%Y', l.date) = '1997' AND a.frequency = 'POPLATEK MESICNE' ORDER BY l.amount ASC LIMIT 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [a.account_id]",
+        "candidate_sql": "SELECT l.amount FROM account AS a JOIN loan AS l ON a.account_id = l.account_id WHERE STRFTIME('%Y', l.date) = '1997' AND a.frequency = 'POPLATEK MESICNE' ORDER BY l.amount ASC LIMIT 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 99,
+    "db_id": "financial",
+    "difficulty": "moderate",
+    "manual_label": "COMPLEX (COLUMN_SELECT, LOGIC_STRUCT)",
+    "detected_type": "GENERAL",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [MAX(l.amount) AS highest_]",
+        "candidate_sql": "SELECT a.account_id FROM account AS a JOIN loan AS l ON a.account_id = l.account_id WHERE l.duration > 12 AND STRFTIME('%Y', a.date) = '1993' GROUP BY a.account_id ORDER BY highest_approved_amount DESC LIMIT 1",
+        "exec_success": false,
+        "exec_error": "no such column: highest_approved_amount",
+        "row_count": 0,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [a.account_id]",
+        "candidate_sql": "SELECT MAX(l.amount) AS highest_approved_amount FROM account AS a JOIN loan AS l ON a.account_id = l.account_id WHERE l.duration > 12 AND STRFTIME('%Y', a.date) = '1993' GROUP BY a.account_id ORDER BY highest_approved_amount DESC LIMIT 1",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 1,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 125,
+    "db_id": "financial",
+    "difficulty": "challenging",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "EMPTY_FILTER",
+    "pred_cols": 3,
+    "gold_cols": 1,
+    "diff": 2,
+    "candidates_tried": 3,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [d.A3 AS state, CAST((d.A13 - d.A12) AS R]",
+        "candidate_sql": "SELECT d.A2 AS district FROM loan AS l JOIN account AS a ON l.account_id = a.account_id JOIN client AS c ON a.district_id = c.district_id JOIN district AS d ON c.district_id = d.district_id WHERE l.status = 'D' AND l.date < '1997-01-01' AND l.date >= '1995-01-01'",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 2360,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [d.A2 AS district, CAST((d.A13 - d.A12) AS R]",
+        "candidate_sql": "SELECT d.A3 AS state FROM loan AS l JOIN account AS a ON l.account_id = a.account_id JOIN client AS c ON a.district_id = c.district_id JOIN district AS d ON c.district_id = d.district_id WHERE l.status = 'D' AND l.date < '1997-01-01' AND l.date >= '1995-01-01'",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 2360,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(2,): removed [d.A2 AS district, d.A3 AS state]",
+        "candidate_sql": "SELECT CAST((d.A13 - d.A12) AS REAL) / d.A12 * 100 AS unemployment_rate_increment FROM loan AS l JOIN account AS a ON l.account_id = a.account_id JOIN client AS c ON a.district_id = c.district_id JOIN district AS d ON c.district_id = d.district_id WHERE l.status = 'D' AND l.date < '1997-01-01' AND l.date >= '1995-01-01'",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 2360,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 129,
+    "db_id": "financial",
+    "difficulty": "moderate",
+    "manual_label": "LOGIC_STRUCT",
+    "detected_type": "JOIN_PATH",
+    "pred_cols": 2,
+    "gold_cols": 1,
+    "diff": 1,
+    "candidates_tried": 2,
+    "repaired": false,
+    "repair_description": null,
+    "trials": [
+      {
+        "description": "keep_idx_(0,): removed [SUM(t.amount) AS total_wi]",
+        "candidate_sql": "SELECT d.A2 AS district_name FROM trans AS t JOIN account AS a ON t.account_id = a.account_id JOIN district AS d ON a.district_id = d.district_id WHERE t.type = 'VYDAJ' AND t.date >= '1996-01-01' AND t.date < '1996-02-01' GROUP BY d.A2 ORDER BY total_withdrawal DESC LIMIT 10",
+        "exec_success": false,
+        "exec_error": "no such column: total_withdrawal",
+        "row_count": 0,
+        "ex_pass": false
+      },
+      {
+        "description": "keep_idx_(1,): removed [d.A2 AS district_name]",
+        "candidate_sql": "SELECT SUM(t.amount) AS total_withdrawal FROM trans AS t JOIN account AS a ON t.account_id = a.account_id JOIN district AS d ON a.district_id = d.district_id WHERE t.type = 'VYDAJ' AND t.date >= '1996-01-01' AND t.date < '1996-02-01' GROUP BY d.A2 ORDER BY total_withdrawal DESC LIMIT 10",
+        "exec_success": true,
+        "exec_error": null,
+        "row_count": 10,
+        "ex_pass": false
+      }
+    ]
+  },
+  {
+    "question_id": 159,
+    "db_id": "financial",
+    "difficulty": "simple",
+    "manual_label": "COLUMN_SELECT",
+    "detected_type": "JOIN_PATH",
+    "pred_cols": 10,
+    "gold_cols": 1,
+    "diff": 9,
+    "candidates_tried": 0,
+    "repaired": false,
+    "repair_description": null,
+    "trials": []
+  }
+]
