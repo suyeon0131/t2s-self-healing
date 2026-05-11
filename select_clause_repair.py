@@ -28,6 +28,7 @@ import re
 import os
 import openpyxl
 from tqdm import tqdm
+from itertools import combinations
 
 try:
     import sqlglot
@@ -39,6 +40,7 @@ except ImportError:
 DB_BASE_PATH = "./data/dev_databases"
 SHAPE_LOG_PATH = "./results/result_shape_analysis_log.json"
 FAILURE_CORPUS_PATH = "./results/failure_corpus_official.json"
+V2_HEALING_PATH = "./results/multi_turn_healing_v2.json"
 OUTPUT_LOG_PATH = "./results/select_clause_repair_log.json"
 FAIL_LABEL_PATH = "./results/error_labeling_233.xlsx"
 
@@ -57,7 +59,7 @@ def load_manual_labels():
         qid = ws.cell(row=row, column=2).value
         label = ws.cell(row=row, column=12).value
         if qid and label:
-            labels[qid] = label
+            labels[str(qid)] = label  # str로 통일
     return labels
 
 
@@ -93,8 +95,7 @@ def extract_select_expressions(pred_sql):
     """sqlglot AST로 SELECT 절 expressions 추출
     
     Returns:
-        list of (expression_sql, expression_alias)
-        예: [("COUNT(*)", "cnt"), ("T1.name", "name"), ...]
+        list of (ast_expr, expression_sql, alias)
     """
     try:
         parsed = sqlglot.parse_one(pred_sql, dialect="sqlite",
@@ -110,79 +111,15 @@ def extract_select_expressions(pred_sql):
     for expr in select.expressions:
         expr_sql = expr.sql(dialect="sqlite")
         alias = expr.alias if hasattr(expr, 'alias') and expr.alias else None
-        expressions.append((expr_sql, alias))
+        expressions.append((expr, expr_sql, alias))
 
     return expressions
 
 
-def generate_select_candidates(pred_sql, pred_cols, gold_cols):
-    """SELECT 절에서 컬럼을 제거한 후보 SQL 생성
+def rebuild_select_ast(pred_sql, kept_expressions):
+    """sqlglot AST 기반으로 SELECT 절 재구성
     
-    전략:
-    - diff = pred_cols - gold_cols 만큼 컬럼을 제거
-    - 단순 제거(가장 마지막 컬럼부터)와 조합 제거 시도
-    - sqlglot으로 SELECT 절만 교체
-    
-    Returns:
-        list of (candidate_sql, description, removed_cols)
-    """
-    candidates = []
-    diff = pred_cols - gold_cols
-
-    if diff <= 0:
-        return []
-
-    expressions = extract_select_expressions(pred_sql)
-    if not expressions or len(expressions) <= gold_cols:
-        return []
-
-    n = len(expressions)
-
-    # 전략 1: 단순 제거 — 마지막 diff개 컬럼 제거
-    kept = expressions[:gold_cols]
-    removed = expressions[gold_cols:]
-    candidate_sql = rebuild_select(pred_sql, kept)
-    if candidate_sql and candidate_sql != pred_sql:
-        candidates.append((
-            candidate_sql,
-            f"remove_last_{diff}: removed {[e[0][:30] for e in removed]}",
-            [e[0] for e in removed]
-        ))
-
-    # 전략 2: 처음 diff개 컬럼 제거 (앞쪽이 불필요 컬럼인 경우)
-    if diff < n:
-        kept2 = expressions[diff:]
-        removed2 = expressions[:diff]
-        candidate_sql2 = rebuild_select(pred_sql, kept2)
-        if candidate_sql2 and candidate_sql2 != pred_sql and candidate_sql2 != candidates[0][0] if candidates else True:
-            candidates.append((
-                candidate_sql2,
-                f"remove_first_{diff}: removed {[e[0][:30] for e in removed2]}",
-                [e[0] for e in removed2]
-            ))
-
-    # 전략 3: diff=1인 경우 각 컬럼을 하나씩 제거한 n개 후보
-    if diff == 1 and n <= 8:  # 너무 많은 후보 방지
-        for i in range(n):
-            kept3 = expressions[:i] + expressions[i+1:]
-            removed3 = [expressions[i]]
-            candidate_sql3 = rebuild_select(pred_sql, kept3)
-            if candidate_sql3 and candidate_sql3 != pred_sql:
-                # 중복 체크
-                if not any(c[0] == candidate_sql3 for c in candidates):
-                    candidates.append((
-                        candidate_sql3,
-                        f"remove_idx_{i}: removed [{expressions[i][0][:30]}]",
-                        [expressions[i][0]]
-                    ))
-
-    return candidates
-
-
-def rebuild_select(pred_sql, kept_expressions):
-    """SELECT 절을 kept_expressions로 재구성
-    
-    sqlglot으로 파싱 후 SELECT 절만 교체
+    kept_expressions: list of (ast_expr, expr_sql, alias)
     """
     try:
         parsed = sqlglot.parse_one(pred_sql, dialect="sqlite",
@@ -191,26 +128,65 @@ def rebuild_select(pred_sql, kept_expressions):
         if not select:
             return None
 
-        # 새 SELECT 표현식 생성
-        new_exprs_sql = ", ".join(expr_sql for expr_sql, _ in kept_expressions)
-
-        # SELECT ~ FROM 사이를 교체
-        sql_upper = pred_sql.upper()
-        select_pos = sql_upper.find("SELECT")
-        from_pos = sql_upper.find("\nFROM")
-        if from_pos == -1:
-            from_pos = sql_upper.find(" FROM")
-            if from_pos == -1:
-                return None
-
-        # SELECT 다음부터 FROM 전까지 교체
-        before = pred_sql[:select_pos + len("SELECT")]
-        after = pred_sql[from_pos:]
-        new_sql = before + " " + new_exprs_sql + after
-
-        return new_sql
+        # AST 객체를 복사해서 새 SELECT에 설정
+        new_exprs = [expr.copy() for expr, _, _ in kept_expressions]
+        select.set("expressions", new_exprs)
+        return parsed.sql(dialect="sqlite")
     except Exception:
         return None
+
+
+def generate_select_candidates(pred_sql, pred_cols, gold_cols, max_candidates=50):
+    """combinations 기반 SELECT subset 후보 생성
+    
+    gold_cols개의 컬럼만 남기는 모든 조합을 시도
+    n <= 10인 경우만 조합 생성 (너무 많은 후보 방지)
+    """
+    if gold_cols <= 0 or pred_cols <= gold_cols:
+        return []
+
+    expressions = extract_select_expressions(pred_sql)
+    if not expressions or len(expressions) <= gold_cols:
+        return []
+
+    n = len(expressions)
+    if n > 10:
+        # n이 크면 단순 전략만
+        candidates = []
+        # 뒤쪽 제거
+        kept = expressions[:gold_cols]
+        removed = expressions[gold_cols:]
+        sql = rebuild_select_ast(pred_sql, kept)
+        if sql and sql != pred_sql:
+            candidates.append((sql, f"remove_last: removed {[e[1][:25] for e in removed]}", [e[1] for e in removed]))
+        # 앞쪽 제거
+        kept2 = expressions[n-gold_cols:]
+        removed2 = expressions[:n-gold_cols]
+        sql2 = rebuild_select_ast(pred_sql, kept2)
+        if sql2 and sql2 != pred_sql and not any(c[0] == sql2 for c in candidates):
+            candidates.append((sql2, f"remove_first: removed {[e[1][:25] for e in removed2]}", [e[1] for e in removed2]))
+        return candidates
+
+    candidates = []
+    seen = set()
+
+    for keep_indices in combinations(range(n), gold_cols):
+        kept = [expressions[i] for i in keep_indices]
+        removed = [expressions[i] for i in range(n) if i not in keep_indices]
+        sql = rebuild_select_ast(pred_sql, kept)
+
+        if sql and sql != pred_sql and sql not in seen:
+            seen.add(sql)
+            candidates.append((
+                sql,
+                f"keep_idx_{keep_indices}: removed [{', '.join(e[1][:25] for e in removed)}]",
+                [e[1] for e in removed]
+            ))
+
+        if len(candidates) >= max_candidates:
+            break
+
+    return candidates
 
 
 # ============================================================
@@ -235,6 +211,11 @@ def main():
         failures = json.load(f)
     failure_map = {r.get('question_id'): r for r in failures}
 
+    # v2 healing 결과에서 fixed_sql 로드
+    with open(V2_HEALING_PATH, 'r', encoding='utf-8') as f:
+        v2_results = json.load(f)
+    v2_map = {r.get('question_id'): r for r in v2_results}
+
     manual_labels = load_manual_labels()
 
     logs = []
@@ -251,11 +232,12 @@ def main():
             continue
 
         gold_sql = failure.get('gold_sql', '')
-        fixed_sql = failure.get('fixed_sql', case.get('pred_sql', ''))
 
-        # v2의 최종 fixed_sql 사용 (self-healing 후 결과)
-        # shape analysis는 fixed_sql 기준이었으므로 동일하게 사용
-        pred_sql = fixed_sql
+        # v2 self-healing 최종 결과 SQL 사용
+        v2_result = v2_map.get(qid)
+        if not v2_result:
+            continue
+        pred_sql = v2_result.get('fixed_sql', '')
 
         # gold 실행
         gold_ok, gold_rows, gold_err = execute_sql_rows(db_id, gold_sql)
@@ -281,7 +263,7 @@ def main():
 
             trial = {
                 "description": cand_desc,
-                "candidate_sql": cand_sql[:300],
+                "candidate_sql": cand_sql,  # 전체 저장
                 "exec_success": pred_ok,
                 "exec_error": pred_err,
                 "row_count": len(pred_rows) if pred_rows else 0,
@@ -306,7 +288,7 @@ def main():
             "question_id": qid,
             "db_id": db_id,
             "difficulty": case.get('difficulty'),
-            "manual_label": manual_labels.get(qid),
+            "manual_label": manual_labels.get(str(qid)),
             "detected_type": case.get('detected_type'),
             "pred_cols": pred_cols,
             "gold_cols": gold_cols,
