@@ -121,18 +121,76 @@ def extract_select_expressions(pred_sql):
 
 
 def rebuild_select(pred_sql, kept_expressions):
+    """SELECT 절을 kept_expressions로 재구성 — CTE/서브쿼리 포함 처리"""
     try:
+        # sqlglot AST 기반 재구성 시도
+        parsed = sqlglot.parse_one(pred_sql, dialect="sqlite",
+                                   error_level=sqlglot.ErrorLevel.IGNORE)
+
+        # 가장 바깥쪽 SELECT 찾기
+        select_node = parsed.find(sqlglot_exp.Select)
+        if select_node:
+            new_exprs = []
+            for expr_sql, _ in kept_expressions:
+                try:
+                    expr_node = sqlglot.parse_one(expr_sql, dialect="sqlite",
+                                                   error_level=sqlglot.ErrorLevel.IGNORE)
+                    new_exprs.append(expr_node)
+                except Exception:
+                    pass
+
+            if new_exprs and len(new_exprs) == len(kept_expressions):
+                select_node.set("expressions", new_exprs)
+                return parsed.sql(dialect="sqlite")
+
+        # fallback: 문자열 기반 (CTE 없는 단순 SQL)
         sql_upper = pred_sql.upper()
-        select_pos = sql_upper.find("SELECT")
-        from_pos = sql_upper.find("\nFROM")
-        if from_pos == -1:
-            from_pos = sql_upper.find(" FROM")
-        if from_pos == -1 or select_pos == -1:
+
+        # CTE 있으면 CTE 다음의 SELECT 위치 찾기
+        with_pos = sql_upper.find("WITH ")
+        if with_pos != -1:
+            # WITH 절 이후 최상위 SELECT 찾기 — 괄호 깊이 추적
+            depth = 0
+            i = with_pos
+            while i < len(sql_upper):
+                if sql_upper[i] == '(':
+                    depth += 1
+                elif sql_upper[i] == ')':
+                    depth -= 1
+                elif depth == 0 and sql_upper[i:i+6] == 'SELECT':
+                    select_pos = i
+                    break
+                i += 1
+            else:
+                return None
+        else:
+            select_pos = sql_upper.find("SELECT")
+
+        if select_pos == -1:
             return None
+
+        # SELECT 이후 FROM 위치 찾기 (괄호 깊이 0인 FROM)
+        depth = 0
+        i = select_pos + len("SELECT")
+        from_pos = -1
+        while i < len(sql_upper):
+            if sql_upper[i] == '(':
+                depth += 1
+            elif sql_upper[i] == ')':
+                depth -= 1
+            elif depth == 0 and sql_upper[i:i+5] in (' FROM', '\nFROM'):
+                from_pos = i
+                break
+            i += 1
+
+        if from_pos == -1:
+            return None
+
         new_exprs_sql = ", ".join(expr_sql for expr_sql, _ in kept_expressions)
         before = pred_sql[:select_pos + len("SELECT")]
         after = pred_sql[from_pos:]
         return before + " " + new_exprs_sql + after
+
     except Exception:
         return None
 
@@ -351,9 +409,40 @@ def main():
     with open(V2_HEALING_PATH, 'r', encoding='utf-8') as f:
         v2_results = json.load(f)
 
+    # v2 healing 결과 로드 (gold_sql, fixed_sql 참조용)
+    with open(V2_HEALING_PATH, 'r', encoding='utf-8') as f:
+        v2_results = json.load(f)
+    v2_map = {r.get('question_id'): r for r in v2_results}
+
+    # 전체 baseline 실패 262건 대상 (v2 성공 여부 무관)
+    # → column_binding은 v2 성공 케이스도 포함해야 하고
+    #   select_clause는 v2 실패 케이스에서만 의미 있음
     with open(FAILURE_CORPUS_PATH, 'r', encoding='utf-8') as f:
         failures = json.load(f)
     failure_map = {r.get('question_id'): r for r in failures}
+
+    # shape 분류 및 operator 적용을 위해
+    # pred_sql: v2 fixed_sql (self-healing 후 최종 SQL)
+    # gold_sql: failure_corpus의 gold_sql
+    all_cases = []
+    for r in v2_results:
+        qid = r.get('question_id')
+        failure = failure_map.get(qid)
+        if not failure:
+            continue
+        all_cases.append({
+            'question_id': qid,
+            'db_id': r.get('db_id'),
+            'difficulty': r.get('difficulty'),
+            'is_healed': r.get('is_healed', False),
+            'fixed_sql': r.get('fixed_sql', ''),
+            'gold_sql': failure.get('gold_sql', ''),
+            'turn_log': r.get('turn_log', []),
+        })
+
+    print(f"📂 전체 대상: {len(all_cases)}건 (v2 성공 포함)")
+    print(f"   - v2 성공: {sum(1 for x in all_cases if x['is_healed'])}건")
+    print(f"   - v2 실패: {sum(1 for x in all_cases if not x['is_healed'])}건\n")
 
     # AST probe 결과 로드 (column binding용)
     ast_probe_map = {}
@@ -364,10 +453,6 @@ def main():
 
     manual_labels = load_manual_labels()
 
-    # 실패 케이스만
-    failed_cases = [r for r in v2_results if not r.get('is_healed')]
-    print(f"📂 v2 실패 케이스: {len(failed_cases)}건\n")
-
     logs = []
     repaired_count = 0
     shape_stats = {}
@@ -375,17 +460,14 @@ def main():
                       "column_binding": {"tried": 0, "success": 0},
                       "skipped": 0}
 
-    for r in tqdm(failed_cases):
-        qid = r.get('question_id')
-        db_id = r.get('db_id')
-        pred_sql = r.get('fixed_sql', '')
-        gold_sql = r.get('gold_sql', '')
+    for case in tqdm(all_cases):
+        qid = case['question_id']
+        db_id = case['db_id']
+        pred_sql = case['fixed_sql']
+        gold_sql = case['gold_sql']
+        is_healed = case['is_healed']
 
         if not pred_sql or not gold_sql:
-            continue
-
-        failure = failure_map.get(qid)
-        if not failure:
             continue
 
         # gold 실행
@@ -400,6 +482,19 @@ def main():
             shape_class = "EXEC_ERROR"
         else:
             shape_class = classify_shape(pred_rows, pred_cols, gold_rows, gold_cols)
+
+        # v2 이미 성공한 케이스는 shape만 기록하고 operator 적용 스킵
+        if is_healed:
+            shape_stats[shape_class] = shape_stats.get(shape_class, 0) + 1
+            logs.append({
+                "question_id": qid,
+                "db_id": db_id,
+                "is_healed": True,
+                "shape_class": shape_class,
+                "operator_used": None,
+                "repaired": False,
+            })
+            continue
 
         shape_stats[shape_class] = shape_stats.get(shape_class, 0) + 1
 
@@ -443,9 +538,10 @@ def main():
         logs.append({
             "question_id": qid,
             "db_id": db_id,
-            "difficulty": r.get('difficulty'),
+            "difficulty": case.get('difficulty'),
+            "is_healed": False,
             "manual_label": manual_labels.get(str(qid)),
-            "detected_type": r.get('turn_log', [{}])[0].get('detected_type') if r.get('turn_log') else None,
+            "detected_type": case.get('turn_log', [{}])[0].get('detected_type') if case.get('turn_log') else None,
             "shape_class": shape_class,
             "pred_cols": pred_cols,
             "gold_cols": gold_cols,
