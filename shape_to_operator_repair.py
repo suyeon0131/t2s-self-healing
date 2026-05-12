@@ -483,17 +483,44 @@ def main():
         else:
             shape_class = classify_shape(pred_rows, pred_cols, gold_rows, gold_cols)
 
-        # v2 이미 성공한 케이스는 shape만 기록하고 operator 적용 스킵
+        # v2 이미 성공한 케이스는 column_binding만 시도 (select_clause는 스킵)
         if is_healed:
             shape_stats[shape_class] = shape_stats.get(shape_class, 0) + 1
-            logs.append({
-                "question_id": qid,
-                "db_id": db_id,
-                "is_healed": True,
-                "shape_class": shape_class,
-                "operator_used": None,
-                "repaired": False,
-            })
+
+            # column binding 오류가 있으면 시도 (v2 성공 여부 무관)
+            ast_probe = ast_probe_map.get(qid, {})
+            invalid_refs = ast_probe.get('column_probe', {}).get('invalid_refs', []) if ast_probe else []
+            has_column_binding = any(
+                r.get('issue') == 'column_not_in_resolved_table' and r.get('candidate_tables')
+                for r in invalid_refs
+            )
+
+            if has_column_binding:
+                operator_stats["column_binding"]["tried"] += 1
+                repaired, repair_sql, trials = column_binding_repair(db_id, pred_sql, invalid_refs, gold_rows)
+                if repaired:
+                    operator_stats["column_binding"]["success"] += 1
+                    repaired_count += 1
+                logs.append({
+                    "question_id": qid,
+                    "db_id": db_id,
+                    "is_healed": True,
+                    "shape_class": shape_class,
+                    "has_column_binding": has_column_binding,
+                    "operator_used": "column_binding",
+                    "repaired": repaired,
+                    "repair_sql": repair_sql,
+                    "candidates_tried": len(trials),
+                })
+            else:
+                logs.append({
+                    "question_id": qid,
+                    "db_id": db_id,
+                    "is_healed": True,
+                    "shape_class": shape_class,
+                    "operator_used": None,
+                    "repaired": False,
+                })
             continue
 
         shape_stats[shape_class] = shape_stats.get(shape_class, 0) + 1
