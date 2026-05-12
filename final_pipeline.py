@@ -473,6 +473,9 @@ def main():
     with open(OUTPUT_LOG_PATH, 'w', encoding='utf-8') as f:
         json.dump(logs, f, ensure_ascii=False, indent=2)
 
+    # 통계
+    stage1_success = sum(1 for r in v2_results if r.get('is_healed'))
+
     # v2 EX: 500건 중 몇 건 성공인지 계산
     # EX 56.0% = 280건 (baseline 236 + v2 추가 44건 기준이지만 실제는 공식 채점 필요)
     v2_ex_count = round(500 * 0.560)  # 280건
